@@ -1,0 +1,3 @@
+$vs = A | B | C | D | E | F | G | H | I | J | K | S;
+
+([S] < $vs > [S])
