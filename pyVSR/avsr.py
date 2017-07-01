@@ -137,7 +137,7 @@ def run(train_files=(),
     # TODO - wrap the code below in a function
 
     fld = path.split(path.split(feature_dir)[0])[1]
-    fld = './results/avsp2017/' + str(experiment_name) + '/' + fld + '_' + str(hmm_states) + 'states/'
+    fld = './results/' + str(experiment_name) + '/' + fld + '_' + str(hmm_states) + 'states/'
     makedirs(fld, exist_ok=True)
 
     from glob import glob

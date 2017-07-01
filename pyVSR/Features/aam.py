@@ -157,7 +157,8 @@ class AAMFeature(Feature):
         frame_buffer = LazyList.init_from_iterable([])
         buffer_len = 256
         for idx, file in enumerate(files[1:]):
-            with open('log_' + self._outModelName + '.txt', 'w') as log:
+            # useful to check progress
+            with open('./run/log_' + self._outModelName + '.txt', 'w') as log:
                 log.write(str(idx) + ' ' + file + '\n')
 
             frames = mio.import_video(file,
