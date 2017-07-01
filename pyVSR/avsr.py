@@ -96,15 +96,9 @@ class AVSR(object):
         else:
             raise Exception('Unknown feature type: ' + feature_type)
 
-        try:
-            with Pool(self._nThreads) as p:
-                p.starmap(_process_one_file,
-                          zip(files, repeat(processor), repeat(process_opts), repeat(out_dir), repeat(frame_rate)))
-        except RuntimeError:
-            import warnings
-            warnings.warn('multiprocessing code failed, falling back to single threaded', RuntimeWarning)
-            for file in files:
-                _process_one_file(file, processor, process_opts, out_dir, frame_rate)
+        with Pool(self._nThreads) as p:
+            p.starmap(_process_one_file,
+                      zip(files, repeat(processor), repeat(process_opts), repeat(out_dir), repeat(frame_rate)))
 
 
 def run(train_files=(),

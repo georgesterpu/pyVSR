@@ -76,19 +76,9 @@ class AAMFeature(Feature):
             self._max_iters = process_opts['max_iters']
 
             self._fitter_type = process_opts['landmark_fitter']
-            # Landmark fitter (pretrained ERT or AAM)
+            # Landmark fitter (pretrained ERT or AAM), actually loaded later to avoid pickling with Pool
             if self._fitter_type == 'aam':
                 self._aam_fitter_file = process_opts['aam_fitter']
-                self._aam_fitter = mio.import_pickle(self._aam_fitter_file)
-                fitter = LucasKanadeAAMFitter(self._aam_fitter, lk_algorithm_cls=WibergInverseCompositional,
-                                              n_shape=self._shape_components, n_appearance=self._appearance_components)
-            elif self._fitter_type == 'ert':
-                fitter = DlibWrapper(
-                    path.join(current_path, '../pretrained/shape_predictor_68_face_landmarks.dat'))
-            else:
-                raise Exception('unknown fitter, did you mean aam/ert?')
-
-            self._landmark_fitter = fitter
 
             # Parameters source
             # If fitting,
@@ -215,6 +205,7 @@ class AAMFeature(Feature):
     def get_feature(self, file, process_opts=None):
 
         self._maybe_start_logging(file)
+        self._load_landmark_fitter()
 
         frames = mio.import_video(file,
                                   landmark_resolver=self._myresolver,
@@ -364,6 +355,18 @@ class AAMFeature(Feature):
             with open('./run/logs/' + self._title + '/log_' + cf + '.txt', 'a') as log:
                 log.write('frame {}. error: {} \n'.format(str(frame_idx), str(error)))
 
+    def _load_landmark_fitter(self):
+        if self._fitter_type == 'aam':
+            self._aam_fitter = mio.import_pickle(self._aam_fitter_file)
+            fitter = LucasKanadeAAMFitter(self._aam_fitter, lk_algorithm_cls=WibergInverseCompositional,
+                                          n_shape=self._shape_components, n_appearance=self._appearance_components)
+        elif self._fitter_type == 'ert':
+            fitter = DlibWrapper(
+                path.join(current_path, '../pretrained/shape_predictor_68_face_landmarks.dat'))
+        else:
+            raise Exception('unknown fitter, did you mean aam/ert?')
+
+        self._landmark_fitter = fitter
 
 # These functions need to be redefined when importing the model
 # and this adds an inconvenient when distributing it
