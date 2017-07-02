@@ -69,7 +69,7 @@ class AVSR(object):
                                    feature_type=None,
                                    process_opts=None,
                                    frame_rate=30,
-                                   out_dir=None,
+                                   output_dir=None,
                                    ):
         r"""
         Writes the features to htk format
@@ -78,10 +78,10 @@ class AVSR(object):
         :param feature_type:
         :param process_opts:
         :param frame_rate:
-        :param out_dir:
+        :param output_dir:
         :return:
         """
-        makedirs(out_dir, exist_ok=True)
+        makedirs(output_dir, exist_ok=True)
         if feature_type == 'dct':
             from .Features import dct
             processor = dct.DCTFeature(feature_dir=feature_dir)
@@ -92,13 +92,13 @@ class AVSR(object):
             # extractor.fitData(featOpts)
         elif feature_type == 'aam':
             from .Features import aam
-            processor = aam.AAMFeature(feat_dir=feature_dir, process_opts=process_opts)
+            processor = aam.AAMFeature(process_opts=process_opts)
         else:
             raise Exception('Unknown feature type: ' + feature_type)
 
         with Pool(self._nThreads) as p:
             p.starmap(_process_one_file,
-                      zip(files, repeat(processor), repeat(process_opts), repeat(out_dir), repeat(frame_rate)))
+                      zip(files, repeat(processor), repeat(process_opts), repeat(output_dir), repeat(frame_rate)))
 
 
 def run(train_files=(),

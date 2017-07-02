@@ -19,10 +19,100 @@ class AAMFeature(Feature):
     r"""
     Active Appearance Model (AAM) feature extraction
     """
-    def __init__(self, files=None, feat_dir=None, extract_opts=None, process_opts=None, out_dir=None):
+    def __init__(self, files=None, extract_opts=None, process_opts=None, out_dir=None):
+        r"""
 
+        Parameters
+        ----------
+        files : `tuple`/`list` of strings representing absolute file names
+
+        extract_opts : `dict` holding the configuration for feature extraction
+            For complete description of some parameters, please refer upstream
+             to their documentation in the menpofit project
+            Must specify the following options:
+            ``warp`` : `holistic` or `patch`;
+                chooses between menpofit.aam.HolisticAAM and menpofit.aam.PatchAAM
+            ``resolution_scales`` : `tuple` of `floats` between 0.0 and 1.0
+                A pyramid of AAMs will be created, one for each element in the tuple
+                A value of 1.0 corresponds to the full resolution images, 0.5 to a half and so on
+            ``patch_shape`` : `tuple` of `tuple` of two `ints`
+                Parameter required when ``warp`` is `patch`
+                One tuple per resolution scale
+                The patch shape is specified as a window of MxN pixels around each landmark
+            ``max_shape_components`` : `int` or `list` of `ints`
+                maximum number of eigenvectors (per resolution scale) kept from shape PCA
+                True value can be less that max, depending on the variance in the training images
+            ``max_appearance_components: `int` or `list` of `ints`
+                maximum number of eigenvectors (per resolution scale) kept from texture PCA
+                True value can be less that max, depending on the variance in the training images
+            ``diagonal`` : `int` serving as the diagonal size of the rescaled training images
+            ``features`` : `no_op`, `hog`, `dsift`, `fast_dsift`
+                `no_op` uses the image pixels for the texture model
+                `hog, dsift, fast_dsift` extract popular image descriptors instead
+            ``landmark_dir`` : `str`, directory containing the facial landmarks for the training images
+            ``landmark_group`` : `pts_face`, `pts_chin`, `pts_lips`
+                `pts_face` constructs a full facial model using all the 68 landmark points
+                `pts_chin` uses landmarks [2:15) plus [48:68) to model the chin and lips region
+                `pts_lips` uses only [48:68) to model the lip region
+            ``confidence_thresh`` : `float` in range [0:1]
+                Makes use of the OpenFace average confidence score, keeping only the frames above this threshold
+            ``kept_frames`` : `float` in range [0:1]
+                Samples the remaining video frames (above the confidence threshold) to keep only a small proportion
+                This avoids training the AAM with a large number of consecutive video frames
+                Before sampling, the frames from each video are sorted by the amount of lip opening.
+                Then sampling is done at evenly spaced intervals
+            ``greyscale`` : `boolean`; if ``True``, converts the frames to a single channel of grey / luminance levels
+                if ``False``, the model is built on the original RGB channels
+            ``model_name`` : `str`; name of the AAM pickle object to be stored offline
+
+        process_opts: `dict` holding the configuration for feature processing
+            Must specif y the following options:
+            ``face_detector`` : `dlib` or `opencv` or `dpm`
+                Selects the implementation that detects a face in an image
+                `dlib` is the fastest, `dpm` may be more accurate (check G.Chrysos, Feb 2017)
+            ``landmark_fitter : `aam` or `ert`
+                Selects the algorithm that fits the landmarks on a detected face
+                `ert` uses a model pre-trained on challenging datasets
+                `aam` may use your own model
+            ``aam_fitter`` : `str`, full file name storing an AAM pickle to be used for landmark fitting
+                Mandatory if ``landmark_fitter`` is AAM
+            ``parameters_from`` : `fitting`, `projection`
+                If `fitting`, the shape and appearance parameters optimized by the Lukas-Kanade fitting algorithm
+                are returned. If `projection`, only the final shape of the fitting process will be used, initializing
+                another fitter based on a new AAM specified below
+            `` projection_aam`` : `str`, full file name storing an AAM pickle to be used in the process described above
+            ``shape`` : `face`, `chin` or `lips`
+                Chooses an AAM that may describe an entire face, or sub-parts of it
+                If `chin` or `lips`, the associated landmarks will be selected from the face fitting process,
+                then a few more iterations of a fitting algorithm will be run using the part AAM specified below
+            ``part_AAM`` : `None` or a `str` representing the file storing a part AAM pickle (chin or lips)
+                Must be different from `None` if `shape` is `chin` or `lips`
+                Such part_AAM can be obtained by choosing the ``landmark_group`` parameter accordingly in the
+                extraction process
+            ``confidence_thresh`` : `float`, DEPRECATED
+                It was used to filter out the frames having a confidence threshold for the landmarks lower than
+                this value. Their corresponding features were simply arrays of zeros. Now we consider every frame
+                where a face is detected.
+            ``shape_components`` : `int` or `list` of `ints` (one per resolution scale)
+                Selects the number of the kept shape eigenvectors for the projection and fitter AAMs
+                The shape feature size will be up to this value
+            ``appearance_components`` : `int` or `list` of `ints` (one per resolution scale)
+                Selects the number of the kept texture eigenvectors for the projection and fitter AAMs
+                The appearance feature size will be up to this value
+            ``max_iters`` : `int` or `list` of `ints` (one per resolution scale)
+                Selects the number of iterations (per resolution scale) of the optimisation algorithm
+                Only used for the fitter AAM, since 0 iterations are used with the projection AAM
+            ``landmark_dir`` : `str`, directory containing the ground-truth facial landmarks
+                for every frame of each video. Used only to compute an error between prediction and ground-truth.
+                Can be `None` if the error log is not necessary
+            ``log_errors`` : `boolean`
+                If ``True``, generates a log file per video, stating the models used
+                and the prediction error for each frame
+            ``log_dir`` : `str`, directory to store the error logs above
+
+        out_dir : `str`, absolute path where the features are to be stored
+        """
         self._allFiles = files
-        self._featDir = feat_dir
         self._outDir = out_dir
         if extract_opts is not None:
             self._extractOpts = extract_opts
@@ -105,9 +195,19 @@ class AAMFeature(Feature):
             if self._log_errors is False:
                 self._myresolver = None
 
-            self._title = process_opts['log_title']
+            self._log_dir = process_opts['log_dir']
 
     def extract_save_features(self, files):
+        r"""
+        Uses the input files as train AAMs and store the resulting pickle on the disk
+        Parameters
+        ----------
+        files
+
+        Returns
+        -------
+
+        """
 
         # 1. fetch all video frames, attach landmarks
         frames = mio.import_video(files[0],
@@ -204,6 +304,18 @@ class AAMFeature(Feature):
         mio.export_pickle(obj=aam, fp=self._outDir + self._outModelName, overwrite=True, protocol=4)
 
     def get_feature(self, file, process_opts=None):
+        r"""
+        Computes the AAM features, according to the `process_opts`
+        Parameters
+        ----------
+        file
+        process_opts
+
+        Returns
+        -------
+        A dictionary of five elements, each representing a variation of the computed features
+        (shape and appearance alone or concatenated, with or without derivatives)
+        """
 
         self._maybe_start_logging(file)
         self._load_landmark_fitter()
@@ -337,9 +449,9 @@ class AAMFeature(Feature):
     def _maybe_start_logging(self, file):
         if self._log_errors is True:
             from os import makedirs
-            makedirs('./run/logs/' + self._title, exist_ok=True)
+            makedirs('./run/logs/' + self._log_dir, exist_ok=True)
             cf = file_to_feature(file, extension='')
-            with open('./run/logs/' + self._title + '/log_' + cf + '.txt', 'w') as log:
+            with open('./run/logs/' + self._log_dir + '/log_' + cf + '.txt', 'w') as log:
                 log.write('{} \n'.format(file))
                 log.write('Face detector: {}\n'.format(self._face_detect_method))
                 if self._fitter_type == 'aam':
@@ -353,7 +465,7 @@ class AAMFeature(Feature):
         if self._log_errors is True:
             cf = file_to_feature(file, extension='')
             error = result.final_error()
-            with open('./run/logs/' + self._title + '/log_' + cf + '.txt', 'a') as log:
+            with open('./run/logs/' + self._log_dir + '/log_' + cf + '.txt', 'a') as log:
                 log.write('frame {}. error: {} \n'.format(str(frame_idx), str(error)))
 
     def _load_landmark_fitter(self):
@@ -407,6 +519,16 @@ def normalize_mean_std(input_array):
 
 
 def attach_semantic_landmarks(image):
+    r"""
+    Adds the chin and lips landmark groups to a menpo.Image object
+    Parameters
+    ----------
+    image
+
+    Returns
+    -------
+
+    """
     landmarks_face = image.landmarks['pts_face']
     image.landmarks['pts_chin'] = PointCloud(np.vstack((landmarks_face.points[2:15], landmarks_face.points[48:68])))
     image.landmarks['pts_lips'] = PointCloud(landmarks_face.points[48:68])
@@ -414,6 +536,17 @@ def attach_semantic_landmarks(image):
 
 
 def _pointcloud_subset(face_cloud, subset):
+    r"""
+    Selects a semantic subset of points from a face pointcloud
+    Parameters
+    ----------
+    face_cloud
+    subset
+
+    Returns
+    -------
+    The `lips` or `chin` pointclouds, as a subset of `face_cloud`
+    """
 
     if subset == 'lips':
         subset_pts = PointCloud(face_cloud.points[48:68])
