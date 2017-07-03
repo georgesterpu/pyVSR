@@ -42,7 +42,7 @@ def read_htk_header(file):
     f.seek(0, 0)
     header = f.read(12)
     f.close()
-    num_samples, sample_period, sample_size, parameter_kind = unpack(">IIHH", header)
+    num_samples, sample_period, sample_size, parameter_kind = unpack(">iihh", header)
     num_features = sample_size // 4
     return num_samples, sample_period, sample_size, parameter_kind, num_features
 
@@ -52,7 +52,7 @@ def read_htk_file(file):
     f = open(file, 'rb')
     f.seek(0, 0)
     header = f.read(12)
-    num_samples, sample_period, sample_size, parameter_kind = unpack(">IIHH", header)
+    num_samples, sample_period, sample_size, parameter_kind = unpack(">iihh", header)
     data = np.asarray(np.fromfile(f, '>f'), dtype=np.float32)
     veclen = sample_size // 4
     data = data.reshape(np.size(data)//veclen, veclen)

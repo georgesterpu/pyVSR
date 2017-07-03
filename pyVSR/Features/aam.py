@@ -19,13 +19,11 @@ class AAMFeature(Feature):
     r"""
     Active Appearance Model (AAM) feature extraction
     """
-    def __init__(self, files=None, extract_opts=None, process_opts=None, out_dir=None):
+    def __init__(self, extract_opts=None, process_opts=None, output_dir=None):
         r"""
 
         Parameters
         ----------
-        files : `tuple`/`list` of strings representing absolute file names
-
         extract_opts : `dict` holding the configuration for feature extraction
             For complete description of some parameters, please refer upstream
              to their documentation in the menpofit project
@@ -110,10 +108,9 @@ class AAMFeature(Feature):
                 and the prediction error for each frame
             ``log_dir`` : `str`, directory to store the error logs above
 
-        out_dir : `str`, absolute path where the features are to be stored
+        output_dir : `str`, absolute path where the features are to be stored
         """
-        self._allFiles = files
-        self._outDir = out_dir
+        self._outDir = output_dir
         if extract_opts is not None:
             self._extractOpts = extract_opts
 

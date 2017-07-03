@@ -12,8 +12,34 @@ class DCTFeature(Feature):
 
     def __init__(self,
                  extract_opts=None,
-                 feature_dir=None):
+                 output_dir=None):
+        r"""
 
+        Parameters
+        ----------
+        extract_opts : `dict` holding the configuration for feature extraction
+            Must specify the following options:
+            ``roi_extraction`` : `stored` or `dlib`
+
+                When using `stored` mode, the path to the directory storing the ROI for each file
+                has to be specified in the subsequent option `roi_dir`
+                The ROI dir should contain the feature-like file names with .roi extensions
+                (e.g. .utils.file_to_feature(video_file, extension='.roi'). Every line in a file represents
+                the ROI coordinates in a frame and contains for numbers X,Y, DX, DY, where X, Y are the
+                top left coordinates of the ROI, and DX, DY are the width and height of the box
+
+                When using `dlib` mode, the ROI coordinates are computed on the fly, first by detecting a set of
+                landmarks with the Dlib's pre-trained ERT shape predictor, then cropping the region around
+                the lips. An extra option `boundary_proportion` has to be specified, inflating the area
+                around the lips by some amount.
+
+            ``roi_dir`` : `str`, directory storing ROI coordinates, must be used in conjunction with `stored`
+            ``boundary_proportion`` : positive `float`, used in conjuction with `dlib`
+            ``window_size`` : `tuple` of two `ints`, one for each image dimension
+                Represents the sub-sampled ROI window size, hence the full DCT matrix has the same shape
+
+        output_dir : `str`, absolute path where the features are to be stored
+        """
         if extract_opts is not None:
             self._featOpts = extract_opts
             self._roiExtraction = extract_opts['roi_extraction']
@@ -25,19 +51,33 @@ class DCTFeature(Feature):
                 raise Exception('The supported methods for ROI extraction are: stored, dlib')
             self._xres = extract_opts['window_size'][0]
             self._yres = extract_opts['window_size'][1]
-        self._featDir = feature_dir
+        self._featDir = output_dir
 
     def get_feature(self, file, process_opts):
         r"""
 
         Parameters
         ----------
-        file
-        process_opts
-
+        file: `str`, path to a .h5 file storing the DCT matrix
+        process_opts : `dict` holding the post-processing configuration
+            Must specify the following options:
+            ``mask`` : `str`, specifies which DCT coefficients should be kept
+                Example: a mask of '1-44` will keep 44 coefficients, discarding the bias term
+                The coefficients are chosen in a zig-zag pattern from the top-left corner
+            ``keep_basis`` : `boolean`, states whether final feature should contain the DCT coeffs
+            ``delta`` : `boolean`, states whether final feature should contain the first derivative of the DCT coeffs
+            ``double_delta`` : `boolean`, state whether the final feature should contain the second derivative
+            ``derivative_order`` : `first` or `fourth`, accuracy of the derivatives
+                Central differences schemes are used (but forward and backward at the boundaries)
+                The derivative window length is minimal for the requested order of accuracy
+                (e.g. two forward and two backward coefficients for the fourth order accurate central derivative)
+            ``interpolation_factor`` : positive `int`, the new sampling rate is a multiple of this factor
+            ``interpolation_type`` : `str`, must be used in conjunction with non-unitary `interpolation_factor`s
+                It is the same as the `kind` parameter of scipy.interpolate.interp1d
+                Some options: `linear`, `quadratic`, `cubic`
         Returns
         -------
-
+        A dictionary of one key: `DCT`, holding the DCT-based feature
         """
         dct = self._load_dct(file)
         rows, cols, frames = dct.shape
@@ -46,9 +86,9 @@ class DCTFeature(Feature):
         keep_basis = process_opts['keep_basis']
         delta = process_opts['delta']
         double_delta = process_opts['double_delta']
-        deriv_order = process_opts['deriv_order']
+        derivative_order = process_opts['derivative_order']
 
-        interp_factor = process_opts['interp_factor']
+        interp_factor = process_opts['interpolation_factor']
 
         ncoeffs, first, last = _parse_mask(mask)
 
@@ -61,31 +101,31 @@ class DCTFeature(Feature):
             dct_zz[frame, :] = frame_dct_truncated[first:(last+1)]
 
         if interp_factor != 1:
-            interp_type = process_opts['interp_type']
+            interp_kind = process_opts['interpolation_kind']
             dct_zz_interp = vsrmath.interpolate_feature(
                 feat=dct_zz,
                 factor=interp_factor,
-                interpolation_kind=interp_type)
+                interpolation_kind=interp_kind)
             dct_zz = dct_zz_interp  # make it more obvious that we're changing the reference
 
         feature = dct_zz
 
         if delta is True:
-            if deriv_order == 'first':
+            if derivative_order == 'first':
                 # delta_coeffs_dummy = self._accurate_derivative(dct_zz, type='delta')
                 delta_coeffs = np.diff(dct_zz, n=1, axis=0)
                 delta_coeffs = np.vstack((delta_coeffs, delta_coeffs[-1, :]))
-            elif deriv_order == 'fourth':
+            elif derivative_order == 'fourth':
                 delta_coeffs = vsrmath.accurate_derivative(dct_zz, derivative_type='delta')
             else:
                 raise Exception('Unsupported derivative order')
             feature = np.hstack((feature, delta_coeffs))
 
         if double_delta is True:
-            if deriv_order == 'first':
+            if derivative_order == 'first':
                 accel_coeffs = np.diff(dct_zz, n=2, axis=0)
                 accel_coeffs = np.vstack((accel_coeffs, accel_coeffs[-1, :], accel_coeffs[-1, :]))
-            elif deriv_order == 'fourth':
+            elif derivative_order == 'fourth':
                 accel_coeffs = vsrmath.accurate_derivative(dct_zz, derivative_type='double_delta')
             else:
                 raise Exception('Unsupported derivative order')
@@ -103,9 +143,15 @@ class DCTFeature(Feature):
         return dct_seq
 
     def extract_save_features(self, file):
-        """
+        r"""
 
-        :return:
+        Parameters
+        ----------
+        file
+
+        Returns
+        -------
+
         """
         dct = self._compute_3d_dct(file)
         outfile = utils.file_to_feature(file, extension='.h5')

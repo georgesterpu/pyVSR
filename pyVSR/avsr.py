@@ -50,7 +50,7 @@ class AVSR(object):
 
         elif feature_type == 'aam':
             from .Features import aam
-            extractor = aam.AAMFeature(files=files, extract_opts=extract_opts, out_dir=output_dir)
+            extractor = aam.AAMFeature(extract_opts=extract_opts, output_dir=output_dir)
             extractor.extract_save_features(files)
             return
 
@@ -84,7 +84,7 @@ class AVSR(object):
         makedirs(output_dir, exist_ok=True)
         if feature_type == 'dct':
             from .Features import dct
-            processor = dct.DCTFeature(feature_dir=feature_dir)
+            processor = dct.DCTFeature(output_dir=feature_dir)
         elif feature_type == 'pca':
             from .Features import pca
             processor = pca.PCAFeature(vidFiles=(files,),

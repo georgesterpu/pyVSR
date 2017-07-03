@@ -1,5 +1,5 @@
 # pyVSR
-A Python toolkit for Visual Speech Recognition
+Python toolkit for Visual Speech Recognition
 
 # About
 
