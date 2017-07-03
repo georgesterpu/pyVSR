@@ -14,7 +14,14 @@ class LandmarkFeature(Feature):
     """
 
     def __init__(self, files, opts, out_dir):
+        r"""
 
+        Parameters
+        ----------
+        files
+        opts
+        out_dir
+        """
         self._files = files
         self._featOpts = opts
         self._outDir = out_dir
@@ -23,6 +30,16 @@ class LandmarkFeature(Feature):
         self._nLandmarks = 68
 
     def extract_save_features(self, file):
+        r"""
+        Saves the facial landmarks in text format
+        Parameters
+        ----------
+        file
+
+        Returns
+        -------
+
+        """
         self._find_landmarks_openface(file)
         self._parse_landmarks_file(file)
 
@@ -38,8 +55,14 @@ class LandmarkFeature(Feature):
 
     def _parse_landmarks_file(self, file):
         r"""
-        :param file:
-        :return:
+        For each video frame it creates a landmark file that could be interpreted by menpo
+        Parameters
+        ----------
+        file
+
+        Returns
+        -------
+
         """
 
         infile = utils.file_to_feature(file, extension='.full.pts')
@@ -78,6 +101,20 @@ class LandmarkFeature(Feature):
 
 
 def landmark_filter(file, landmark_dir, threshold, keep):
+    r"""
+    From a video file, it keeps only the frames above a landmark confidence threshold
+    A further uniform sampling is done to retain only the `keep` proportion of images
+    Parameters
+    ----------
+    file
+    landmark_dir
+    threshold
+    keep
+
+    Returns
+    -------
+
+    """
 
     pts_file = utils.file_to_feature(file, extension='.full.pts')
 
@@ -97,6 +134,17 @@ def landmark_filter(file, landmark_dir, threshold, keep):
 
 
 def _landmark_confidence_filter(contents, threshold):
+    r"""
+    Filters the frames according to a landmark confidence threshold
+    Parameters
+    ----------
+    contents
+    threshold
+
+    Returns
+    -------
+
+    """
 
     confidence_id = 2
     success_id = 3
@@ -114,6 +162,19 @@ def _landmark_confidence_filter(contents, threshold):
 
 
 def _landmark_sample_filter(contents, frames_idx, keep):
+    r"""
+    Sampling at equally spaced intervals
+    on the list of sorted frames by the amount of lip opening
+    Parameters
+    ----------
+    contents
+    frames_idx
+    keep
+
+    Returns
+    -------
+
+    """
 
     contents = [contents[i+1] for i in frames_idx]
 

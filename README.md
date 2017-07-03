@@ -128,7 +128,7 @@ experiment.extract_save_features(
     output_dir='./run/features/aam/'
 )
 ```
-  
+
 ##### 5. Extract AAM Features
 ```python
 experiment.process_features_write_htk(
@@ -181,6 +181,7 @@ The recommended way is to create an empty `conda` environment and install the fo
 * conda install -c menpo pango harfbuzz
 * conda install h5py
 * conda install natsort
+* conda install scipy
 
 It is the user's responsibility to compile `OpenFace` and `HTK`.\
 Please refer to the documentation upstream:\
@@ -190,6 +191,8 @@ Please refer to the documentation upstream:\
 Place the HTK binaries in the system path (e.g. `/usr/local/bin/`)\
 Place the OpenFace binaries in `./pyVSR/bins/openface/`
 
+pyVSR was initially developed on a system running Manjaro Linux, frequently updated from the `testing` repositories.
+We will be testing the code soon on other platforms.
 
 # How to cite
 If you use this work, please cite it as:

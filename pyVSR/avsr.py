@@ -24,11 +24,16 @@ class AVSR(object):
 
         r"""
 
-        :param files:
-        :param feature_type:
-        :param extract_opts:
-        :param output_dir:
-        :return:
+        Parameters
+        ----------
+        files : `tuple` of video file paths
+        feature_type : `dct` or `aam` are currently supported
+        extract_opts : ``dict` holding the configuration for feature extraction
+        output_dir
+
+        Returns
+        -------
+
         """
 
         makedirs(output_dir, exist_ok=True)
@@ -72,19 +77,24 @@ class AVSR(object):
                                    output_dir=None,
                                    ):
         r"""
-        Writes the features to htk format
-        :param files:
-        :param feature_dir:
-        :param feature_type:
-        :param process_opts:
-        :param frame_rate:
-        :param output_dir:
-        :return:
+        Writes features to .htk format
+        Parameters
+        ----------
+        files
+        feature_dir : `str`, path where the pre-processed features are stored
+        feature_type : `dct`, `landmark`, `aam`
+        process_opts : `dict` holding the configuration for feature processing
+        frame_rate : `float`
+        output_dir : `str`, path to store the extracted features
+
+        Returns
+        -------
+
         """
         makedirs(output_dir, exist_ok=True)
         if feature_type == 'dct':
             from .Features import dct
-            processor = dct.DCTFeature(output_dir=feature_dir)
+            processor = dct.DCTFeature(feature_dir=feature_dir)
         elif feature_type == 'pca':
             from .Features import pca
             processor = pca.PCAFeature(vidFiles=(files,),

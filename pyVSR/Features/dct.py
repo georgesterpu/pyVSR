@@ -12,7 +12,7 @@ class DCTFeature(Feature):
 
     def __init__(self,
                  extract_opts=None,
-                 output_dir=None):
+                 feature_dir=None):
         r"""
 
         Parameters
@@ -38,7 +38,7 @@ class DCTFeature(Feature):
             ``window_size`` : `tuple` of two `ints`, one for each image dimension
                 Represents the sub-sampled ROI window size, hence the full DCT matrix has the same shape
 
-        output_dir : `str`, absolute path where the features are to be stored
+        feature_dir : `str`, directory where the features in .h5 format are stored
         """
         if extract_opts is not None:
             self._featOpts = extract_opts
@@ -51,7 +51,7 @@ class DCTFeature(Feature):
                 raise Exception('The supported methods for ROI extraction are: stored, dlib')
             self._xres = extract_opts['window_size'][0]
             self._yres = extract_opts['window_size'][1]
-        self._featDir = output_dir
+        self._featDir = feature_dir
 
     def get_feature(self, file, process_opts):
         r"""
@@ -277,7 +277,7 @@ class DCTFeature(Feature):
 
 
 def zz(matrix, nb):
-    """Zig-zag traversal of the input matrix
+    r"""Zig-zag traversal of the input matrix
     :param matrix: input matrix
     :param nb: number of coefficients to keep
     :return: an array of nb coefficients
@@ -304,7 +304,7 @@ def zz(matrix, nb):
 
 
 def izz(feature, shape):
-    """ Reconstruction of a matrix from zig-zag coefficients
+    r""" Reconstruction of a matrix from zig-zag coefficients
     :param feature: an array of coefficients as input
     :param shape: a tuple with the number of rows and columns of the output matrix
     :return: a matrix reconstructed from zig-zag coefficients with the specified shape
@@ -395,6 +395,18 @@ def _crop_roi(fullframe, roisz):
 
 
 def _parse_mask(mask):
+    r"""
+    Interprets a string mask to return the number of coefficients to be kept
+    and the indices of the first and last ones in the zig-zagged flattened DCT matrix
+    Example: '1-44' returns 44, first=1, last=44
+    Parameters
+    ----------
+    mask
+
+    Returns
+    -------
+
+    """
     tmp = mask.split('-')
     first = int(tmp[0])
     last = int(tmp[1])
@@ -403,6 +415,18 @@ def _parse_mask(mask):
 
 
 def _get_roi_pointcloud(image):
+    r"""
+    Predicts a set of 68 facial landmarks from a given image
+    and selects the subset of the lip region
+    Parameters
+    ----------
+    image
+
+    Returns
+    -------
+    The point cloud of lip landmarks
+    A `success` boolean flag, is ``False`` if no face was detected
+    """
     from menpofit.dlib import DlibWrapper
     from menpodetect import load_dlib_frontal_face_detector
     from menpo.shape import PointCloud
