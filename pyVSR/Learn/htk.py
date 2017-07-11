@@ -445,9 +445,9 @@ def read_result_file(file):
 
 def read_result_str(result_string):
     idx_acc = result_string.index('Acc=')
-    acc = float(result_string[idx_acc + 4:idx_acc + 9])
+    acc = float(result_string[idx_acc + 4:idx_acc + 9].strip(','))
     idx_corr = result_string.index('Corr=')
-    corr = float(result_string[idx_corr + 5:idx_corr + 10])
+    corr = float(result_string[idx_corr + 5:idx_corr + 10].strip(','))
     return corr, acc
 
 
