@@ -84,4 +84,6 @@ def write_sequences_to_mlf(sequences, file):
             for symbol in sequences[label]:
                 if symbol != 'EOS':
                     stream.write(symbol+'\n')
+                else:
+                    break
             stream.write('.\n')
