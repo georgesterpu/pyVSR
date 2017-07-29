@@ -16,10 +16,11 @@ def main():
         files=train+test,
         feature_type='dct',
         extract_opts={
-            'roi_extraction': 'dlib',
+            'roi_extraction': 'yes',
             'boundary_proportion': 0.7,
-            # 'roi_dir': './run/features/rois/',
-            'window_size': (36, 36)
+            'video_backend': 'menpo',
+            'roi_dir': './run/features/roi/',
+            'window_size': (36, 36),
         },
         output_dir='./run/features/dct/'
     )

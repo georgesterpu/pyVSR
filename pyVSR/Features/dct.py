@@ -19,36 +19,47 @@ class DCTFeature(Feature):
         ----------
         extract_opts : `dict` holding the configuration for feature extraction
             Must specify the following options:
-            ``roi_extraction`` : `stored` or `dlib`
+            ``roi_extraction`` : `yes`, `no` or `only`
 
-                When using `stored` mode, the path to the directory storing the ROI for each file
+                When using the `no` option, the path to the directory storing the ROI for each file
                 has to be specified in the subsequent option `roi_dir`
                 The ROI dir should contain the feature-like file names with .roi extensions
                 (e.g. .utils.file_to_feature(video_file, extension='.roi'). Every line in a file represents
                 the ROI coordinates in a frame and contains for numbers X,Y, DX, DY, where X, Y are the
                 top left coordinates of the ROI, and DX, DY are the width and height of the box
 
-                When using `dlib` mode, the ROI coordinates are computed on the fly, first by detecting a set of
+                When using the `yes` option, the ROI coordinates are computed on the fly, first by detecting a set of
                 landmarks with the Dlib's pre-trained ERT shape predictor, then cropping the region around
                 the lips. An extra option `boundary_proportion` has to be specified, inflating the area
-                around the lips by some amount.
+                around the lips by some amount. The coordinates will be stored at the `roi_dir` path.
+                For subsequent runs, `roi_extraction` can then be set to `no`.
 
-            ``roi_dir`` : `str`, directory storing ROI coordinates, must be used in conjunction with `stored`
+                When using the `only` option, the function returns after storing the ROI coordinates in files.
+
+            ``roi_dir`` : `str`, directory storing ROI coordinates
             ``boundary_proportion`` : positive `float`, used in conjuction with `dlib`
             ``window_size`` : `tuple` of two `ints`, one for each image dimension
                 Represents the sub-sampled ROI window size, hence the full DCT matrix has the same shape
+            ``video_backend`` : `menpo` or `opencv`
+                The `menpo` backend is based on ffmpeg and should work out of the box on most platforms.
+                The `opencv` backend is much faster, but you may have problems to properly set it up under Anaconda
+                (some mystery around video support in cv2.VideoCapture, you don't know it from here)
 
         feature_dir : `str`, directory where the features in .h5 format are stored
         """
         if extract_opts is not None:
             self._featOpts = extract_opts
             self._roiExtraction = extract_opts['roi_extraction']
-            if self._roiExtraction == 'stored':
-                self._roiDir = extract_opts['roi_dir']
-            elif self._roiExtraction == 'dlib':
+            self._roiDir = extract_opts['roi_dir']
+            if self._roiExtraction == 'yes':
                 self._boundary_proportion = extract_opts['boundary_proportion']
+
+            if 'video_backend' in extract_opts:
+                self._video_backend = extract_opts['video_backend']
             else:
-                raise Exception('The supported methods for ROI extraction are: stored, dlib')
+                # `menpo` backend enabled by default as `opencv` needs to be compiled with ffmpeg flag
+                self._video_backend = 'menpo'
+
             self._xres = extract_opts['window_size'][0]
             self._yres = extract_opts['window_size'][1]
         self._featDir = feature_dir
@@ -153,11 +164,47 @@ class DCTFeature(Feature):
         -------
 
         """
-        dct = self._compute_3d_dct(file)
-        outfile = utils.file_to_feature(file, extension='.h5')
-        self._write_dctseq_to_file(outfile, dct)
+        if self._roiExtraction == 'only':
+            # skips computing the DCT
+            self._preload_dlib_detector_fitter()
+            self._detect_write_roi_bounds(file)
+            return
+        else:
+            if self._roiExtraction == 'yes':
+                self._preload_dlib_detector_fitter()
+                self._detect_write_roi_bounds(file)
+
+            dct = self._compute_3d_dct(file)
+            outfile = utils.file_to_feature(file, extension='.h5')
+            self._write_dctseq_to_file(outfile, dct)
+
+    def _detect_write_roi_bounds(self, file):
+        from menpo.io import import_video
+        frames = import_video(filepath=file, normalize=True, exact_frame_count=True)
+
+        bounds = []
+        for frame_idx, frame in enumerate(frames):
+
+            lips_pointcloud, success = _get_roi_pointcloud(frame, self._detect, self._fitter)
+            if success is True:
+                roi_bounds = _get_pointcloud_bounds(lips_pointcloud, self._boundary_proportion)
+            else:
+                roi_bounds = [-1, -1, -1, -1]
+            bounds.append(roi_bounds)
+        self._write_rois_to_file(file, bounds)
 
     def _compute_3d_dct(self, file):
+        if self._video_backend == 'menpo':
+            self._preload_dlib_detector_fitter()
+            dct = self._compute_3d_dct_menpo(file)
+        elif self._video_backend == 'opencv':
+            dct = self._compute_3d_dct_opencv(file)
+        else:
+            raise Exception('Available video backends are `menpo` and `opencv`')
+
+        return dct
+
+    def _compute_3d_dct_menpo(self, file):
         r"""
         Video import is based on menpo implementation
         (LazyList with ffmpeg backend)
@@ -168,46 +215,43 @@ class DCTFeature(Feature):
         frames = import_video(filepath=file, normalize=True, exact_frame_count=True)
         dct_volume = np.zeros((self._yres, self._xres, len(frames)), dtype=np.float32)
 
-        if self._roiExtraction == 'stored':
-            self._rois = self._get_frames_rois(file)
-
         for frame_idx, frame in enumerate(frames):
-            roi = self._get_roi(frame, frame_idx)
+            roi = self._get_roi(frame, frame_idx, file)
+
             dctmat = np.zeros(np.shape(roi))
             cv2.dct(roi, dctmat)
             dct_volume[:, :, frame_idx] = dctmat
 
         return dct_volume
 
-    def _get_roi(self, menpo_image, frame_idx):
+    def _get_roi(self, menpo_image, frame_idx, roi_file):
         r"""
-        Extracts the mouth ROI from a menpo.image.Image object
-        :param menpo_image:
-        :param frame_idx:
-        :return:
+        Extracts from a video frame the lips ROI delimited by the bounds
+        specified in the ROI file
+        Parameters
+        ----------
+        menpo_image
+        frame_idx
+        roi_file
+
+        Returns
+        -------
+
         """
-        if self._roiExtraction == 'stored':
-            bounds = self._rois[frame_idx]
-            gray = menpo_image.as_greyscale()
-            gray = gray.crop(
-                min_indices=(bounds[1], bounds[0]),
-                max_indices=(bounds[1] + bounds[3], bounds[0] + bounds[2])
+        video_roi = self._read_roi_file(roi_file)
+        x_min, y_min, x_delta, y_delta = video_roi[frame_idx]
+        try:
+            cropped = menpo_image.crop(
+                min_indices=(y_min, x_min),
+                max_indices=(y_min + y_delta, x_min + x_delta)
             )
-            gray = gray.resize((self._xres, self._yres))
-            roi = gray.pixels[0]
-        elif self._roiExtraction == 'dlib':
-            roi_pointcloud, success = _get_roi_pointcloud(menpo_image)
-            if success:
-                roi = menpo_image.crop_to_pointcloud_proportion(
-                    roi_pointcloud,
-                    boundary_proportion=self._boundary_proportion)
-                roi = roi.as_greyscale()
-                roi = roi.resize((self._xres, self._yres))
-                roi = roi.pixels[0]  # why do we have a shape of 1xMxN ?
-            else:
-                roi = np.zeros((self._xres, self._yres))
-        else:
-            raise Exception('Normally an unreachable use-case')
+        except Exception as e:
+            print('Exception: ' + str(e) + '. Filling ROI with zeros.')
+            return np.zeros((self._xres, self._yres))
+
+        gray = cropped.as_greyscale()
+        gray = gray.resize((self._xres, self._yres))
+        roi = gray.pixels[0]
 
         return roi
 
@@ -222,12 +266,36 @@ class DCTFeature(Feature):
 
         return
 
-    def _get_frames_rois(self, file):
+    def _read_roi_file(self, file):
+        r"""
+        Reads the contents of a ROI file
+        Parameters
+        ----------
+        file
+
+        Returns
+        -------
+
+        """
         roif = utils.file_to_feature(file, extension='.roi')
         rois = utils.parse_roi_file(self._roiDir+roif)
         return rois
 
+    def _write_rois_to_file(self, file, bounds):
+        roif = utils.file_to_feature(file, extension='.roi')
+        from os import makedirs, path
+
+        makedirs(self._roiDir, exist_ok=True)
+
+        buffer = ''
+        for line in bounds:
+            buffer += ' '.join(str(x) for x in line) + '\n'
+
+        with open(path.join(self._roiDir, roif), 'w') as f:
+            f.write(buffer)
+
     def _compute_3d_dct_opencv(self, file):
+
         r"""
         Runs much faster than the menpo-based one
         but usually opencv is distributed without video support (compile flag)
@@ -240,7 +308,7 @@ class DCTFeature(Feature):
         cap = cv2.VideoCapture(file)
         vidframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        rois = self._get_frames_rois(file)
+        rois = self._read_roi_file(file)
 
         totalframes = rois.shape[0]
 
@@ -274,6 +342,15 @@ class DCTFeature(Feature):
     def _resize_frame(self, frame):
         resized = cv2.resize(frame, (self._xres, self._yres), interpolation=cv2.INTER_CUBIC) / 255
         return resized
+
+    def _preload_dlib_detector_fitter(self):
+        from menpofit.dlib import DlibWrapper
+        from menpodetect import load_dlib_frontal_face_detector
+
+        from os import path
+        dir_ = path.dirname(__file__)
+        self._fitter = DlibWrapper(path.join(dir_, '../pretrained/shape_predictor_68_face_landmarks.dat'))
+        self._detect = load_dlib_frontal_face_detector()
 
 
 def zz(matrix, nb):
@@ -389,8 +466,12 @@ def _crop_roi(fullframe, roisz):
     ypos = roisz[1]
     xlen = roisz[2]
     ylen = roisz[3]
-    # numpy array indexing: lines are first index => y direction goes first
-    cropped = fullframe[ypos:ypos+ylen, xpos:xpos+xlen]
+    # numpy array indexing: lines are the first index => y direction goes first
+
+    if xpos == -1:
+        cropped = np.zeros((36, 36))
+    else:
+        cropped = fullframe[ypos:ypos+ylen, xpos:xpos+xlen]
     return cropped
 
 
@@ -414,34 +495,49 @@ def _parse_mask(mask):
     return ncoeffs, first, last
 
 
-def _get_roi_pointcloud(image):
+def _get_roi_pointcloud(image, detect, fitter):
     r"""
     Predicts a set of 68 facial landmarks from a given image
     and selects the subset of the lip region
     Parameters
     ----------
-    image
+    image: menpo image
+    detect: face detector
+    fitter: landmark fitter
 
     Returns
     -------
     The point cloud of lip landmarks
     A `success` boolean flag, is ``False`` if no face was detected
     """
-    from menpofit.dlib import DlibWrapper
-    from menpodetect import load_dlib_frontal_face_detector
     from menpo.shape import PointCloud
-    from os import path
-    dir_ = path.dirname(__file__)
-    fitter = DlibWrapper(path.join(dir_, '../pretrained/shape_predictor_68_face_landmarks.dat'))
-    detect = load_dlib_frontal_face_detector()
 
     bboxes = detect(image)
+
     pcld = PointCloud([])
     if len(bboxes) >= 1:
         result = fitter.fit_from_bb(image, bounding_box=bboxes[0])
+
         pcld = PointCloud(result.final_shape.points[48:68])
         success = True
     else:  # no face detected
         success = False
 
     return pcld, success
+
+
+def _get_pointcloud_bounds(pointcloud, boundary_proportion):
+    r"""
+
+    Parameters
+    ----------
+    pcld
+
+    Returns
+    -------
+
+    """
+    bounds = pointcloud.bounds(np.min(pointcloud.range() * boundary_proportion))
+    y_min, x_min = bounds[0]
+    y_delta, x_delta = bounds[1] - bounds[0]
+    return [int(x_min), int(y_min), int(x_delta), int(y_delta)]
