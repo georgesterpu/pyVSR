@@ -2,6 +2,11 @@ import numpy as np
 
 
 def accurate_derivative(mat, derivative_type):
+    r"""
+    Computes an accurate derivative of the 1D input signal
+    Supported derivatives: first, second
+    The derivatives are fourth order accurate, using the minimal filter length
+    """
     rows, _ = mat.shape
     filter_matrix = make_fourth_order(rows, derivative_type)
     filtered = filter_matrix @ mat
@@ -9,6 +14,10 @@ def accurate_derivative(mat, derivative_type):
 
 
 def make_fourth_order(rows, derivative_type='delta'):
+    r"""
+    Dynamically generates a filtering matrix from kernels used in
+    computing the first or second derivatives that are fourth order accurate
+    """
     if derivative_type == 'delta':
         filter_kernel = np.array([1 / 12, -2 / 3, 0, 2 / 3, -1 / 12])
         filter_forward = np.array([-25 / 12, 4, -3, 4 / 3, -1 / 4])
@@ -42,6 +51,10 @@ def make_fourth_order(rows, derivative_type='delta'):
 
 
 def interpolate_feature(feat, factor, interpolation_kind):
+    r"""
+    Upsamples a signal by an integer factor
+    Makes use of scipy.interp
+    """
     from scipy import interpolate as interp
     frames, _ = feat.shape
     x = factor * np.arange(frames)
