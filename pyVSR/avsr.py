@@ -82,7 +82,7 @@ class AVSR(object):
         ----------
         files
         feature_dir : `str`, path where the pre-processed features are stored
-        feature_type : `dct`, `landmark`, `aam`
+        feature_type : `str`, : 'dct','landmark', 'aam'
         process_opts : `dict` holding the configuration for feature processing
         frame_rate : `float`
         output_dir : `str`, path to store the extracted features
