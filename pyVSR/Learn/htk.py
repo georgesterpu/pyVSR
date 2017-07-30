@@ -40,12 +40,12 @@ class HTKSys(object):
         self._report_results = report_results
 
         # static dataset configs
-        self._config = config_dir + 'settings.conf'
-        self._viseme_list = config_dir + '_viseme_list'
-        self._viseme_dict = config_dir + '_viseme_dict'
-        self._grammar = config_dir + '_grammar'
-        self._labels = config_dir + 'allVisemes.mlf'
-        self._HViteConf = config_dir + 'HVite.conf'
+        self._config = path.join(config_dir, 'settings.conf')
+        self._viseme_list = path.join(config_dir, 'viseme_list')
+        self._viseme_dict = path.join(config_dir, 'viseme_dict')
+        self._grammar = path.join(config_dir, 'grammar')
+        self._labels = path.join(config_dir, 'allVisemes.mlf')
+        self._HViteConf = path.join(config_dir, 'HVite.conf')
 
         # dynamically generated
         self._run_dir = './run/'
