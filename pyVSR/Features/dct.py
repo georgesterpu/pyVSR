@@ -19,22 +19,21 @@ class DCTFeature(Feature):
         ----------
         extract_opts : `dict` holding the configuration for feature extraction
             Must specify the following options:
-            ``roi_extraction`` : `yes`, `no` or `only`
-
-                When using the `no` option, the path to the directory storing the ROI for each file
-                has to be specified in the subsequent option `roi_dir`
-                The ROI dir should contain the feature-like file names with .roi extensions
-                (e.g. .utils.file_to_feature(video_file, extension='.roi'). Every line in a file represents
-                the ROI coordinates in a frame and contains for numbers X,Y, DX, DY, where X, Y are the
-                top left coordinates of the ROI, and DX, DY are the width and height of the box
-
-                When using the `yes` option, the ROI coordinates are computed on the fly, first by detecting a set of
+            ``roi_extraction`` : `coords`, `dct`, `rgb` or `gray`
+                Extracts ROI cordinates (`coords`), ROI pixels in RGB (`rgb`) or converted to grayscale (`gray`),
+                or directly DCT coefficients (`dct`) from the grayscale ROI
+            ``need_coords``: `Boolean`.
+                If `True`, the ROI coordinates are computed on the fly, first by detecting a set of
                 landmarks with the Dlib's pre-trained ERT shape predictor, then cropping the region around
                 the lips. An extra option `boundary_proportion` has to be specified, inflating the area
                 around the lips by some amount. The coordinates will be stored at the `roi_dir` path.
                 For subsequent runs, `roi_extraction` can then be set to `no`.
-
-                When using the `only` option, the function returns after storing the ROI coordinates in files.
+                If `False`, the path to the directory storing the ROI for each file
+                has to be specified in the subsequent option `roi_dir`
+                The ROI dir should contain the feature-like file names with .roi extensions
+                (e.g. .utils.file_to_feature(video_file, extension='.roi'). Every line in a file represents
+                the ROI coordinates in a frame and contains for numbers X,Y, DX, DY, where X, Y are the
+                top left coordinates of the ROI, and DX, DY are the width and height of the box.
 
             ``roi_dir`` : `str`, directory storing ROI coordinates
             ``boundary_proportion`` : positive `float`, used in conjuction with `dlib`
@@ -51,7 +50,13 @@ class DCTFeature(Feature):
             self._featOpts = extract_opts
             self._roiExtraction = extract_opts['roi_extraction']
             self._roiDir = extract_opts['roi_dir']
-            if self._roiExtraction == 'yes':
+
+            if 'need_coords' in extract_opts:
+                self._need_coords = extract_opts['need_coords']
+            else:
+                self._need_coords = False
+
+            if self._need_coords is True:
                 self._boundary_proportion = extract_opts['boundary_proportion']
 
             if 'video_backend' in extract_opts:
@@ -164,19 +169,31 @@ class DCTFeature(Feature):
         -------
 
         """
-        if self._roiExtraction == 'only':
-            # skips computing the DCT
+        if self._need_coords is True:
             self._preload_dlib_detector_fitter()
             self._detect_write_roi_bounds(file)
-            return
-        else:
-            if self._roiExtraction == 'yes':
-                self._preload_dlib_detector_fitter()
-                self._detect_write_roi_bounds(file)
+
+        if self._roiExtraction == 'coords':
+            return  # job already done
+
+        elif self._roiExtraction == 'dct':
 
             dct = self._compute_3d_dct(file)
             outfile = utils.file_to_feature(file, extension='.h5')
-            self._write_dctseq_to_file(outfile, dct)
+            self._write_sequence_to_file(outfile, dct, 'dct', (None, None, None))
+
+        elif self._roiExtraction == 'rgb':
+            rgb = self._get_rois_opencv(file, mode='rgb')
+            outfile = utils.file_to_feature(file, extension='.h5')
+            self._write_sequence_to_file(outfile, rgb, 'rgb', (None, None, None, 3))
+
+        elif self._roiExtraction == 'gray':
+            gray = self._get_rois_opencv(file, mode='gray')
+            outfile = utils.file_to_feature(file, extension='.h5')
+            self._write_sequence_to_file(outfile, gray, 'gray', (None, None, None))
+
+        else:
+            return
 
     def _detect_write_roi_bounds(self, file):
         from menpo.io import import_video
@@ -255,11 +272,11 @@ class DCTFeature(Feature):
 
         return roi
 
-    def _write_dctseq_to_file(self, file, dct_seq):
+    def _write_sequence_to_file(self, file, seq, seq_name, seq_shape):
         import h5py
         f = h5py.File(self._featDir+file, 'w')
-        f.create_dataset('dct', data=dct_seq.astype('float32'),
-                         maxshape=(None, None, None),
+        f.create_dataset(seq_name, data=seq.astype('float32'),
+                         maxshape=seq_shape,
                          compression="gzip",
                          fletcher32=True)
         f.close()
@@ -293,6 +310,46 @@ class DCTFeature(Feature):
 
         with open(path.join(self._roiDir, roif), 'w') as f:
             f.write(buffer)
+
+    def _get_rois_opencv(self, file, mode='gray'):
+        cap = cv2.VideoCapture(file)
+        vidframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        rois = self._read_roi_file(file)
+        totalframes = rois.shape[0]
+
+        if totalframes != vidframes:
+            print('Roi Frames: %d\n' % totalframes)
+            print('Vid Frames: %d\n' % vidframes)
+            raise Exception('Mismatch between the actual number of video frames and the provided ROI _labels')
+
+        if mode == 'gray':
+            roi_seq = np.zeros((totalframes, self._yres, self._xres), dtype=np.float32)
+        elif mode == 'rgb':
+            roi_seq = np.zeros((totalframes, self._yres, self._xres, 3), dtype=np.float32)
+        else:
+            raise Exception('gray or rgb')
+
+        this_frame = 0
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if ret is False:
+                break
+
+            if mode == 'gray':
+                gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+                gray_roi = _crop_roi(gray, rois[this_frame, :])
+                resized = self._resize_frame(gray_roi)
+            elif mode == 'rgb':
+                rgb_roi = _crop_roi(frame, rois[this_frame, :])
+                resized = self._resize_frame(rgb_roi)
+            else:
+                raise Exception('gray or rgb')
+
+            roi_seq[this_frame, :, :] = resized
+
+            this_frame += 1
+
+        return roi_seq
 
     def _compute_3d_dct_opencv(self, file):
 
@@ -468,10 +525,18 @@ def _crop_roi(fullframe, roisz):
     ylen = roisz[3]
     # numpy array indexing: lines are the first index => y direction goes first
 
+    chan = np.ndim(fullframe)
+
     if xpos == -1:
         cropped = np.zeros((36, 36))
     else:
-        cropped = fullframe[ypos:ypos+ylen, xpos:xpos+xlen]
+        if chan == 2:
+            cropped = fullframe[ypos:ypos+ylen, xpos:xpos+xlen]
+        elif chan == 3:
+            cropped = fullframe[ypos:ypos + ylen, xpos:xpos + xlen, :]
+        else:
+            raise Exception('unsupported nb of channels')
+
     return cropped
 
 
