@@ -60,10 +60,15 @@ def read_htk_file(file):
     return data
 
 
-def read_h5_file(file, feature_name):
+def read_h5_file(file, feature_name=None):
     import h5py
     with h5py.File(file, 'r') as f:
-        data = f[feature_name].value
+        if feature_name is None:
+            # If user did not specify a feature
+            # return by default the first one at index 0
+            data = f[list(f.keys())[0]].value
+        else:
+            data = f[feature_name].value
     return data
 
 def split_multiproc(files, num_threads):
