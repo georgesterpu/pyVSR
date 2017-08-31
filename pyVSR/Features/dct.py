@@ -96,7 +96,7 @@ class DCTFeature(Feature):
         A dictionary of one key: `DCT`, holding the DCT-based feature
         """
         dct = self._load_h5_file(file, 'dct')
-        rows, cols, frames = dct.shape
+        frames, rows, cols = dct.shape
 
         mask = process_opts['mask']
         keep_basis = process_opts['keep_basis']
@@ -111,7 +111,7 @@ class DCTFeature(Feature):
         dct_zz = np.zeros((frames, ncoeffs))
 
         for frame in range(frames):
-            frame_dct = dct[:, :, frame]
+            frame_dct = dct[frame, :, :]
             frame_dct_truncated = zz(frame_dct, ncoeffs+first)
             # beware of python indexing, user mask is all-inclusive
             dct_zz[frame, :] = frame_dct_truncated[first:(last+1)]
