@@ -60,7 +60,7 @@ def read_htk_file(file):
     return data
 
 
-def read_h5_file(file, feature_name=None):
+def read_hdf5_file(file, feature_name=None):
     import h5py
     with h5py.File(file, 'r') as f:
         if feature_name is None:
