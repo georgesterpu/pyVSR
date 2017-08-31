@@ -60,6 +60,12 @@ def read_htk_file(file):
     return data
 
 
+def read_h5_file(file, feature_name):
+    import h5py
+    with h5py.File(file, 'r') as f:
+        data = f[feature_name].value
+    return data
+
 def split_multiproc(files, num_threads):
     num_files = len(files)
     average_size = int(np.floor(num_files // num_threads))
