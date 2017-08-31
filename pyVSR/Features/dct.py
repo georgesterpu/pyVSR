@@ -95,7 +95,7 @@ class DCTFeature(Feature):
         -------
         A dictionary of one key: `DCT`, holding the DCT-based feature
         """
-        dct = self._load_h5_file(file, 'dct')
+        dct = self.load_h5_file(file, 'dct')
         frames, rows, cols = dct.shape
 
         mask = process_opts['mask']
@@ -152,7 +152,7 @@ class DCTFeature(Feature):
 
         return {'DCT': feature}
 
-    def _load_h5_file(self, file, feature_name):
+    def load_h5_file(self, file, feature_name):
         import h5py
         with h5py.File(self._featDir + file, 'r') as f:
             dct_seq = f[feature_name].value
