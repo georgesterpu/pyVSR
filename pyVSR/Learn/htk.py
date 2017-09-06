@@ -2,6 +2,7 @@ from os import path, makedirs, remove, listdir
 from subprocess import list2cmdline, run, Popen, PIPE
 import numpy as np
 from ..utils import read_htk_header
+from ..tcdtimit.files import phoneme_file, phoneme_list, viseme_file, viseme_list
 
 
 class HTKSys(object):
@@ -467,10 +468,27 @@ def append_to_file(hmmlist, items):
     return newfile
 
 
-def compute_results2(predicted_labels, ground_truth_file, viseme_list_file):
+def compute_results2(predicted_labels, ground_truth_file, unit_list_file):
 
-    cmd = ['HResults', '-I', ground_truth_file, viseme_list_file, predicted_labels]
+    cmd = ['HResults', '-I', ground_truth_file, unit_list_file, predicted_labels]
 
     p = Popen(cmd, stdout=PIPE, stderr=PIPE)
     results = p.communicate()[0]
     return read_result_str(results.decode('utf-8'))
+
+
+def compute_results3(predicted_labels, unit):
+
+    if unit == 'viseme':
+        return compute_results2(
+            predicted_labels,
+            viseme_file,
+            viseme_list)
+    elif unit == 'phoneme':
+        return compute_results2(
+            predicted_labels,
+            phoneme_file,
+            phoneme_list
+        )
+    else:
+        raise Exception('unknown unit: {}'.format(unit))

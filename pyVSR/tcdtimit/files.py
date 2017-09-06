@@ -2,8 +2,11 @@ from os import path, makedirs
 from glob import glob
 from natsort import natsorted
 
-current_path = path.abspath(path.dirname(__file__))
-_viseme_file = path.join(current_path, './htkconfigs/allVisemes.mlf')
+_current_path = path.abspath(path.dirname(__file__))
+viseme_file = path.join(_current_path, './htkconfigs/allVisemes.mlf')
+phoneme_file = path.join(_current_path, './htkconfigs/allPhonemes.mlf')
+viseme_list = path.join(_current_path, './htkconfigs/viseme_list')
+phoneme_list = path.join(_current_path, './htkconfigs/phoneme_list')
 
 volunteers = ('01M', '02M', '03F', '04M', '05F', '06M', '07F', '08F', '09F', '10M',
               '11F', '12M', '13F', '14M', '15F', '16M', '17F', '18M', '19M', '20M',
@@ -128,8 +131,8 @@ def _preload_files_single_volunteer(dataset_dir, speaker_id):
 
     """
 
-    train_script = path.join(current_path, 'splits/speaker-dependent/train.scp')
-    test_script = path.join(current_path, 'splits/speaker-dependent/test.scp')
+    train_script = path.join(_current_path, 'splits/speaker-dependent/train.scp')
+    test_script = path.join(_current_path, 'splits/speaker-dependent/test.scp')
 
     train_files = []
     test_files = []
@@ -229,7 +232,7 @@ def _write_flist_to_file(files, speaker_type, gender, pose):
             pickle.dump(files, f)
 
 
-def read_sentence_labels(filename):
+def read_sentence_labels(filename, unit='viseme'):
     r"""Finds the labels associated with a sentence
     in a .mlf label file
     Parameters
@@ -243,12 +246,19 @@ def read_sentence_labels(filename):
     """
     file = path.splitext(path.split(filename)[1])[0]
 
-    with open(_viseme_file, 'r') as f:
+    if unit == 'viseme':
+        transcript = viseme_file
+    elif unit == 'phoneme':
+        transcript = phoneme_file
+    else:
+        raise Exception('only `viseme` and `phoneme` unit transcriptions are supported')
+
+    with open(transcript, 'r') as f:
         contents = f.read()
 
     start = contents.find(file)
     end = contents.find('.\n', start)
-    transcript = contents[start:end].splitlines()[1:]
+    sentence_transcript = contents[start:end].splitlines()[1:]
 
-    label_seq = [item.split()[-1] for item in transcript]
+    label_seq = [item.split()[-1] for item in sentence_transcript]
     return label_seq
