@@ -32,6 +32,9 @@ class LandmarkFeature(Feature):
     def extract_save_features(self, file):
         r"""
         Saves the facial landmarks in text format
+        Important note: the OpenFace binaries must be placed in ./bins/openface/
+        Instructions here: https://github.com/TadasBaltrusaitis/OpenFace
+
         Parameters
         ----------
         file
