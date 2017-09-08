@@ -16,7 +16,8 @@ def main():
         files=train+test,
         feature_type='dct',
         extract_opts={
-            'roi_extraction': 'yes',
+            'roi_extraction': 'dct',
+            'need_coords': True,
             'boundary_proportion': 0.7,
             'video_backend': 'menpo',
             'roi_dir': './run/features/roi/',

@@ -20,14 +20,21 @@ class DCTFeature(Feature):
         extract_opts : `dict` holding the configuration for feature extraction
             Must specify the following options:
             ``roi_extraction`` : `coords`, `dct`, `rgb` or `gray`
+
                 Extracts ROI cordinates (`coords`), ROI pixels in RGB (`rgb`) or converted to grayscale (`gray`),
                 or directly DCT coefficients (`dct`) from the grayscale ROI
+
             ``need_coords``: `Boolean`.
+
                 If `True`, the ROI coordinates are computed on the fly, first by detecting a set of
                 landmarks with the Dlib's pre-trained ERT shape predictor, then cropping the region around
                 the lips. An extra option `boundary_proportion` has to be specified, inflating the area
                 around the lips by some amount. The coordinates will be stored at the `roi_dir` path.
                 For subsequent runs, `roi_extraction` can then be set to `no`.
+                Important note: the pre-trained ERT model is not distributed with pyVSR and has to be downloaded
+                manually from: http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+                then uncompressed to ./pyVSR/pretrained/
+
                 If `False`, the path to the directory storing the ROI for each file
                 has to be specified in the subsequent option `roi_dir`
                 The ROI dir should contain the feature-like file names with .roi extensions
@@ -36,9 +43,12 @@ class DCTFeature(Feature):
                 top left coordinates of the ROI, and DX, DY are the width and height of the box.
 
             ``roi_dir`` : `str`, directory storing ROI coordinates
+
             ``boundary_proportion`` : positive `float`, used in conjuction with `dlib`
+
             ``window_size`` : `tuple` of two `ints`, one for each image dimension
                 Represents the sub-sampled ROI window size, hence the full DCT matrix has the same shape
+
             ``video_backend`` : `menpo` or `opencv`
                 The `menpo` backend is based on ffmpeg and should work out of the box on most platforms.
                 The `opencv` backend is much faster, but you may have problems to properly set it up under Anaconda
