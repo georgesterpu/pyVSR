@@ -11,13 +11,19 @@ The main goal of pyVSR is to easily reproduce VSR experiments in order to have a
 
 ### 1. Fetch a filtered list of files from a dataset
   * currently supported: 
+
     * TCD-TIMIT
-      * speaker-dependent protocol
-      * speaker-independent protocol
+      * speaker-dependent protocol (Gillen)
+      * speaker-independent protocol (Gillen)
       * single person
+
+    * OuluVS2
+      * speaker-independent protocol (Saitoh)
+      * single person
+
 ### 2. Extract visual features:
   * Discrete Cosine Transform (DCT)
-    * Automatic ROI extraction
+    * Automatic ROI extraction (grayscale, RGB, DCT)
     * Configurable window size
     * Fourth order accurate derivatives
     * Sample rate interpolation
@@ -63,8 +69,11 @@ experiment.extract_save_features(
         files=train+test,
         feature_type='dct',
         extract_opts={
-            'roi_extraction': 'dlib',
+            'roi_extraction': 'dct',
+            'need_coords': True,
             'boundary_proportion': 0.7,
+            'video_backend': 'menpo',
+            'roi_dir': './run/features/roi/',
             'window_size': (36, 36)
         },
         output_dir='./run/features/dct/'
