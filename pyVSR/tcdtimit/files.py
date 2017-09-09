@@ -63,9 +63,9 @@ def _preload_files_speaker_dependent(dataset_dir):
     -------
 
     """
-    mypath = path.abspath(path.dirname(__file__))
-    train_script = path.join(mypath, 'splits/speaker-dependent/train.scp')
-    test_script = path.join(mypath, 'splits/speaker-dependent/test.scp')
+
+    train_script = path.join(_current_path, 'splits/speaker-dependent/train.scp')
+    test_script = path.join(_current_path, 'splits/speaker-dependent/test.scp')
 
     train_files = []
     test_files = []
