@@ -206,11 +206,11 @@ We will be testing the code soon on other platforms.
 # How to cite
 If you use this work, please cite it as:
 
-George Sterpu, Naomi Harte (2017). 
-"Towards lipreading sentences using Active Appearance Models",
-In AVSP-2017, xx-yy
+George Sterpu and Naomi Harte.
+__Towards lipreading sentences using active appearance models.__
+In AVSP, Stockholm, Sweden, August 2017.
 
-Bibtex will appear here when available
+[Bib](https://raw.githubusercontent.com/georgesterpu/georgesterpu.github.io/master/bibs/avsp2017.bib)
 # Contact
 We are always happy to hear from you:
 
