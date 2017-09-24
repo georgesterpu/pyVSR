@@ -2,14 +2,30 @@ from os import path
 import numpy as np
 
 
-def file_to_feature(file, extension='.h5'):
+def file_to_feature(file, extension='.h5', tree_leaves=4):
+    r"""
+
+    Parameters
+    ----------
+    file
+    extension
+    tree_leaves: `int`, number of sub-directories that define the feature name
+        For example, if file='./a/b/c/d/e/f/g.mp4' and tree_leaves=4
+        then feature_name = 'c_d_e_f_g' + extension
+
+    Returns
+    -------
+
+    """
     base, ext = path.splitext(file)
-    trunk, sentence = path.split(base)
-    trunk, pose = path.split(trunk)
-    trunk, clips = path.split(trunk)
-    trunk, spkid = path.split(trunk)
-    trunk, subject = path.split(trunk)
-    feature_name = subject + '_' + spkid + '_' + clips + '_' + pose + '_' + sentence + extension
+
+    leaves = []
+    for _ in range(tree_leaves):
+        base, leaf = path.split(base)
+        leaves.append(leaf)
+
+    feature_name = '_'.join(leaves[::-1]) + extension
+
     return feature_name
 
 
