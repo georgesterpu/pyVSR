@@ -48,7 +48,7 @@ def request_files(dataset_dir, protocol=None, speaker_type=None, gender=None, sp
         from sklearn.model_selection import train_test_split
         train, test = train_test_split(files, test_size=0.30, random_state=0)
 
-    return train, test
+    return natsorted(train), natsorted(test)
 
 
 def _preload_files_speaker_dependent(dataset_dir):
