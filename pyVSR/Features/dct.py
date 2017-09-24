@@ -44,6 +44,10 @@ class DCTFeature(Feature):
 
             ``roi_dir`` : `str`, directory storing ROI coordinates
 
+            ``num_subdirs_to_file``: `int`, number of sub-directories that define the feature name
+                For example, if file='./a/b/c/d/e/f/g.mp4' and tree_leaves=4
+                then feature_name = 'c_d_e_f_g' + extension
+
             ``boundary_proportion`` : positive `float`, used in conjuction with `dlib`
 
             ``window_size`` : `tuple` of two `ints`, one for each image dimension
@@ -77,6 +81,12 @@ class DCTFeature(Feature):
 
             self._xres = extract_opts['window_size'][0]
             self._yres = extract_opts['window_size'][1]
+
+            if 'num_subdirs_to_file' in extract_opts:
+                self._tree_leaves = extract_opts['num_subdirs_to_file']
+            else:
+                self._tree_leaves = 4  # default for tcdtimit
+
         self._featDir = feature_dir
 
     def get_feature(self, file, process_opts):
@@ -189,17 +199,17 @@ class DCTFeature(Feature):
         elif self._roiExtraction == 'dct':
 
             dct = self._compute_3d_dct(file)
-            outfile = utils.file_to_feature(file, extension='.h5')
+            outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
             self._write_sequence_to_file(outfile, dct, 'dct', (None, None, None))
 
         elif self._roiExtraction == 'rgb':
             rgb = self._get_rois_opencv(file, mode='rgb')
-            outfile = utils.file_to_feature(file, extension='.h5')
+            outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
             self._write_sequence_to_file(outfile, rgb, 'rgb', (None, None, None, 3))
 
         elif self._roiExtraction == 'gray':
             gray = self._get_rois_opencv(file, mode='gray')
-            outfile = utils.file_to_feature(file, extension='.h5')
+            outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
             self._write_sequence_to_file(outfile, gray, 'gray', (None, None, None))
 
         else:
@@ -304,12 +314,12 @@ class DCTFeature(Feature):
         -------
 
         """
-        roif = utils.file_to_feature(file, extension='.roi')
+        roif = utils.file_to_feature(file, extension='.roi', tree_leaves=self._tree_leaves)
         rois = utils.parse_roi_file(self._roiDir+roif)
         return rois
 
     def _write_rois_to_file(self, file, bounds):
-        roif = utils.file_to_feature(file, extension='.roi')
+        roif = utils.file_to_feature(file, extension='.roi', tree_leaves=self._tree_leaves)
         from os import makedirs, path
 
         makedirs(self._roiDir, exist_ok=True)
@@ -349,6 +359,7 @@ class DCTFeature(Feature):
                 gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
                 gray_roi = _crop_roi(gray, rois[this_frame, :])
                 resized = self._resize_frame(gray_roi)
+
             elif mode == 'rgb':
                 rgb_roi = _crop_roi(frame, rois[this_frame, :])
                 resized = self._resize_frame(rgb_roi)
