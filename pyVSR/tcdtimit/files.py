@@ -17,7 +17,7 @@ volunteers = ('01M', '02M', '03F', '04M', '05F', '06M', '07F', '08F', '09F', '10
 # volunteers 27, 35, 53 excluded for their non-irish accent (e.g. spanish, british)
 
 
-def request_files(dataset_dir, protocol=None, speaker_type=None, gender=None, speaker_id=None):
+def request_files(dataset_dir, protocol=None, speaker_type=None, gender=None, speaker_id=None, remove_sa=False):
     r"""Generates the train/test split according to predefined protocols.
     If no protocol is defined, the function attempts to find all the video files located at `dataset_dir`
     and return a random train/test split.
@@ -47,6 +47,10 @@ def request_files(dataset_dir, protocol=None, speaker_type=None, gender=None, sp
         files = _find_files(dataset_dir, speaker_type, gender)
         from sklearn.model_selection import train_test_split
         train, test = train_test_split(files, test_size=0.30, random_state=0)
+
+    if remove_sa == True:
+        train = [file for file in train if 'sa1' not in file and 'sa2' not in file]
+        test = [file for file in test if 'sa1' not in file and 'sa2' not in file]
 
     return natsorted(train), natsorted(test)
 

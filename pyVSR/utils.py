@@ -2,7 +2,7 @@ from os import path
 import numpy as np
 
 
-def file_to_feature(file, extension='.h5', tree_leaves=4):
+def file_to_feature(file, extension='.h5', tree_leaves=5):
     r"""
 
     Parameters
