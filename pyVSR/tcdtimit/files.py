@@ -32,6 +32,9 @@ def request_files(dataset_dir, protocol=None, speaker_type=None, gender=None, sp
         Can be ``females``, ``males`` or ``both``
     speaker_id : `str`, optional
         A three character string encoding the ID of a volunteer, .e.g. ``01M``
+    remove_sa : `bool`, optional
+        Flag to remove the two `sa` sentences from the file list
+        These are spoken by each volunteer
         
     Returns
     -------
@@ -59,6 +62,7 @@ def _read_file_contents(file):
     with open(file, 'r') as ftr:
         contents = ftr.read().splitlines()
     return contents
+
 
 def _preload_files_speaker_dependent(dataset_dir):
     r"""Speaker-dependent protocol
@@ -213,7 +217,9 @@ def read_sentence_labels(filename, unit='viseme'):
     in a .mlf label file
     Parameters
     ----------
-    filename
+    filename : `str`
+    unit : `viseme` or `phoneme`
+        The modeled speech unit
 
     Returns
     -------
