@@ -48,12 +48,17 @@ def request_files(dataset_dir, protocol=None, speaker_type=None, gender=None, sp
         from sklearn.model_selection import train_test_split
         train, test = train_test_split(files, test_size=0.30, random_state=0)
 
-    if remove_sa == True:
+    if remove_sa is True:
         train = [file for file in train if 'sa1' not in file and 'sa2' not in file]
         test = [file for file in test if 'sa1' not in file and 'sa2' not in file]
 
     return natsorted(train), natsorted(test)
 
+
+def _read_file_contents(file):
+    with open(file, 'r') as ftr:
+        contents = ftr.read().splitlines()
+    return contents
 
 def _preload_files_speaker_dependent(dataset_dir):
     r"""Speaker-dependent protocol
@@ -71,17 +76,8 @@ def _preload_files_speaker_dependent(dataset_dir):
     train_script = path.join(_current_path, 'splits/speaker-dependent/train.scp')
     test_script = path.join(_current_path, 'splits/speaker-dependent/test.scp')
 
-    train_files = []
-    test_files = []
-    with open(train_script, 'r') as ftr:
-        contents = ftr.read().splitlines()
-        for line in contents:
-            train_files.append(dataset_dir + line)
-
-    with open(test_script, 'r') as fte:
-        contents = fte.read().splitlines()
-        for line in contents:
-            test_files.append(dataset_dir + line)
+    train_files = [path.join(dataset_dir, line) for line in _read_file_contents(train_script)]
+    test_files = [path.join(dataset_dir, line) for line in _read_file_contents(test_script)]
 
     return train_files, test_files
 
@@ -100,24 +96,11 @@ def _preload_files_speaker_independent(dataset_dir):
 
     """
 
-    from glob import glob
+    train_script = path.join(_current_path, 'splits/speaker-independent/train.scp')
+    test_script = path.join(_current_path, 'splits/speaker-independent/test.scp')
 
-    speakers_train = '24M 04M 26M 02M 32F 47M 06M 50F 59F 23M ' \
-                     '19M 05F 31F 22M 01M 39M 46F 11F 42M 57M ' \
-                     '43F 29M 17F 37F 21M 12M 38F 48M 16M 52M ' \
-                     '40F 13F 14M 03F 20M 51F 30F 10M 07F'.split(' ')
-    speakers_test = '28M 55F 25M 56M 49F 44F 33F 09F 18M 54M ' \
-                    '45F 36F 34M 15F 58F 08F 41M'.split(' ')
-
-    train_files = []
-    test_files = []
-
-    for spk in speakers_train:
-        files = glob(dataset_dir + 'volunteers' + '/' + spk + '/*/' + 'straightcam' + '/*.mp4')
-        train_files.extend(files)
-    for spk in speakers_test:
-        files = glob(dataset_dir + 'volunteers' + '/' + spk + '/*/' + 'straightcam' + '/*.mp4')
-        test_files.extend(files)
+    train_files = [path.join(dataset_dir, line) for line in _read_file_contents(train_script)]
+    test_files = [path.join(dataset_dir, line) for line in _read_file_contents(test_script)]
 
     return train_files, test_files
 
@@ -138,21 +121,10 @@ def _preload_files_single_volunteer(dataset_dir, speaker_id):
     train_script = path.join(_current_path, 'splits/speaker-dependent/train.scp')
     test_script = path.join(_current_path, 'splits/speaker-dependent/test.scp')
 
-    train_files = []
-    test_files = []
-    with open(train_script, 'r') as ftr:
-        contents = ftr.read().splitlines()
-        for line in contents:
-            if speaker_id in line:
-                train_files.append(dataset_dir + line)
+    train_files = [path.join(dataset_dir, line) for line in _read_file_contents(train_script) if speaker_id in line]
+    test_files = [path.join(dataset_dir, line) for line in _read_file_contents(test_script) if speaker_id in line]
 
-    with open(test_script, 'r') as fte:
-        contents = fte.read().splitlines()
-        for line in contents:
-            if speaker_id in line:
-                test_files.append(dataset_dir + line)
-
-    return natsorted(train_files), natsorted(test_files)
+    return train_files, test_files
 
 
 def _find_files(dataset_dir=None, speaker_type='both', gender='both'):
