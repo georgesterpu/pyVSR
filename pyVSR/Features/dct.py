@@ -132,6 +132,7 @@ class DCTFeature(Feature):
 
         for frame in range(frames):
             frame_dct = dct[frame, :, :]
+
             frame_dct_truncated = zz(frame_dct, ncoeffs+first)
             # beware of python indexing, user mask is all-inclusive
             dct_zz[frame, :] = frame_dct_truncated[first:(last+1)]
@@ -395,7 +396,7 @@ class DCTFeature(Feature):
             print('Vid Frames: %d\n' % vidframes)
             raise Exception('Mismatch between the actual number of video frames and the provided ROI _labels')
 
-        dct_seq = np.zeros((self._yres, self._xres, totalframes),
+        dct_seq = np.zeros((totalframes, self._yres, self._xres),
                            dtype=np.float32)  # _yres goes first since numpy indexing is rows-first
 
         this_frame = 0
@@ -411,7 +412,7 @@ class DCTFeature(Feature):
             dctmat = np.zeros(np.shape(resized))
             cv2.dct(resized, dctmat)
 
-            dct_seq[:, :, this_frame] = dctmat
+            dct_seq[this_frame, :, :] = dctmat
 
             this_frame += 1
 
