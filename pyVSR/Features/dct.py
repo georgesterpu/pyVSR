@@ -85,7 +85,7 @@ class DCTFeature(Feature):
             if 'num_subdirs_to_file' in extract_opts:
                 self._tree_leaves = extract_opts['num_subdirs_to_file']
             else:
-                self._tree_leaves = 4  # default for tcdtimit
+                self._tree_leaves = 5  # default for tcdtimit
 
         self._featDir = feature_dir
 
