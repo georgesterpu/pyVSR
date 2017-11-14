@@ -3,10 +3,15 @@ from glob import glob
 from natsort import natsorted
 
 _current_path = path.abspath(path.dirname(__file__))
+
 viseme_file = path.join(_current_path, './htkconfigs/allVisemes.mlf')
 phoneme_file = path.join(_current_path, './htkconfigs/allPhonemes.mlf')
+character_file = path.join(_current_path, './htkconfigs/allCharacters.mlf')
+
 viseme_list = path.join(_current_path, './htkconfigs/viseme_list')
 phoneme_list = path.join(_current_path, './htkconfigs/phoneme_list')
+character_list = path.join(_current_path, './htkconfigs/character_list')
+
 
 volunteers = ('01M', '02M', '03F', '04M', '05F', '06M', '07F', '08F', '09F', '10M',
               '11F', '12M', '13F', '14M', '15F', '16M', '17F', '18M', '19M', '20M',
@@ -232,8 +237,10 @@ def read_sentence_labels(filename, unit='viseme'):
         transcript = viseme_file
     elif unit == 'phoneme':
         transcript = phoneme_file
+    elif unit == 'character':
+        transcript = character_file
     else:
-        raise Exception('only `viseme` and `phoneme` unit transcriptions are supported')
+        raise Exception('only `viseme`, `phoneme` and `character` unit transcriptions are supported')
 
     with open(transcript, 'r') as f:
         contents = f.read()

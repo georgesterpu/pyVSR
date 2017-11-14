@@ -41,10 +41,16 @@ def format_sentence(sentence):
     :param sentence:  `str`
     :return: `list` of characters
     """
-    lower = sentence.lower()
-    chars = list(lower)
-    chars = [char.replace(' ', '_') for char in chars]
-    return chars
+    tmp = sentence[:-1]  # remove ending (?, !, .) to replace later by a .
+    tmp = tmp.lower()
+    # chars = list(lower)
+    tmp = re.sub(r'[:;?,.!\"]','', tmp)  # removing ? , . ! "
+    tmp = re.sub(r' ', '_', tmp)
+
+    tmp = list(tmp)
+    tmp.append('.')
+
+    return tmp
 
 
 def get_prompt_id(line):
@@ -78,7 +84,7 @@ def main():
 
             buffer.extend(sentence)
 
-    with open('allCharacters.txt', 'w') as f:
+    with open(path.join(_current_path, '../htkconfigs/allCharacters.mlf'), 'w') as f:
         f.write("\n".join(buffer))
 
 
