@@ -134,6 +134,8 @@ def run(train_files=(),
     :param report_results:
     :return:
     """
+    makedirs('./run/', exist_ok=True)
+    
     htksys = htk.HTKSys(train_files,
                         test_files,
                         feature_dir,
