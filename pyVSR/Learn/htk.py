@@ -2,7 +2,7 @@ from os import path, makedirs, remove, listdir
 from subprocess import list2cmdline, run, Popen, PIPE
 import numpy as np
 from ..utils import read_htk_header
-from ..tcdtimit.files import phoneme_file, phoneme_list, viseme_file, viseme_list
+from ..tcdtimit.files import phoneme_file, phoneme_list, viseme_file, viseme_list, character_file, character_list
 
 
 class HTKSys(object):
@@ -480,15 +480,19 @@ def compute_results2(predicted_labels, ground_truth_file, unit_list_file):
 def compute_results3(predicted_labels, unit):
 
     if unit == 'viseme':
-        return compute_results2(
-            predicted_labels,
-            viseme_file,
-            viseme_list)
+        ground_truth_file = viseme_file
+        unit_list_file = viseme_list
     elif unit == 'phoneme':
-        return compute_results2(
-            predicted_labels,
-            phoneme_file,
-            phoneme_list
-        )
+        ground_truth_file = phoneme_file
+        unit_list_file = viseme_list
+    elif unit == 'character':
+        ground_truth_file = character_file
+        unit_list_file = character_list
     else:
         raise Exception('unknown unit: {}'.format(unit))
+
+    return compute_results2(
+        predicted_labels,
+        ground_truth_file,
+        unit_list_file
+    )
