@@ -1,0 +1,14 @@
+name: pyvsr
+
+channels:
+    - conda-forge
+    - menpo
+
+dependencies:
+    - python=3
+    - menpofit
+    - menpo
+    - menpodetect
+    - opencv
+    - natsort
+    - h5py
