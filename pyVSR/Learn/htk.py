@@ -382,15 +382,20 @@ class HTKSys(object):
 
             # Run final HERest to collect the accummulators
 
+            acc_files = listdir(current_dir)
+            acc_files = [path.join(current_dir, file) for file in acc_files]
+
             cmd = ['HERest'] + bincfg + ['-C', self._config, '-I', self._labels] + prune_cfg + statscfg + \
                   ['-H', previous_dir + 'vFloors', '-H', previous_dir + 'hmmdefs',
-                   '-M', current_dir, '-p', '0', self._viseme_list, current_dir + '*.acc']
+                   '-M', current_dir, '-p', '0', self._viseme_list] + acc_files
 
             run(list2cmdline(cmd), shell=True, check=True)
 
             # cleanup folder (remove accs, scp.i)
-            cmd = ['rm ' + current_dir + '*.acc']
-            run(cmd, shell=True, check=True)
+            # cmd = ['rm ' + current_dir + '*.acc']
+            # run(cmd, shell=True, check=True)
+            for file in acc_files:
+                remove(file)
 
         for file in scp_list:
             cmd = ['rm ' + file]
