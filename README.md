@@ -192,6 +192,9 @@ The recommended way is to create an empty `conda` environment and install the fo
 * conda install natsort
 * conda install scipy
 
+Alternatively, you can use the `environment.yml` file:
+* conda env create -f environment.yml
+
 It is the user's responsibility to compile `OpenFace` and `HTK`.\
 Please refer to the documentation upstream:\
 [OpenFace](https://github.com/TadasBaltrusaitis/OpenFace)\
