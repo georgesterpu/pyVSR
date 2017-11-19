@@ -201,7 +201,7 @@ Please refer to the documentation upstream:\
 [HTK 3.5](http://htk.eng.cam.ac.uk/download.shtml)
 
 Add the HTK binaries to the system path (e.g. `/usr/local/bin/`) or to `./pyVSR/bins/htk/`\
-Add the OpenFace binaries to the system path or to `./pyVSR/bins/openface/`
+Add the OpenFace binaries to `./pyVSR/bins/openface/`
 
 pyVSR was initially developed on a system running Manjaro Linux, frequently updated from the `testing` repositories.
 We will be testing the code soon on other platforms.
