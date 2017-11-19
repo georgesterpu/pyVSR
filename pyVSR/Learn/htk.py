@@ -1,9 +1,11 @@
-from os import path, makedirs, remove, listdir
+from os import path, makedirs, remove, listdir, environ, pathsep
 from subprocess import list2cmdline, run, Popen, PIPE
 import numpy as np
 from ..utils import read_htk_header
 from ..tcdtimit.files import phoneme_file, phoneme_list, viseme_file, viseme_list, character_file, character_list
 
+current_path = path.abspath(path.dirname(__file__))
+environ['PATH'] += pathsep + path.join(current_path, '../bins/htk/')
 
 class HTKSys(object):
     r"""
