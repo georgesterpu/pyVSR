@@ -161,8 +161,9 @@ class HTKSys(object):
                 remove(partfile)
 
         for file in scp_list:
-            cmd = ['rm ' + file]
-            run(cmd, shell=True, check=True)
+            # cmd = ['rm ' + file]
+            # run(cmd, shell=True, check=True)
+            remove(file)
 
     def _initialize_stats(self):
         firstdir = './run/hmms/hmm' + str(self._num_runs) + '/'
@@ -398,8 +399,9 @@ class HTKSys(object):
                 remove(file)
 
         for file in scp_list:
-            cmd = ['rm ' + file]
-            run(cmd, shell=True, check=True)
+            # cmd = ['rm ' + file]
+            # run(cmd, shell=True, check=True)
+            remove(file)
 
     def print_results(self, nmix, case):
 
