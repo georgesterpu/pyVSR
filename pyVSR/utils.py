@@ -87,6 +87,24 @@ def read_hdf5_file(file, feature_name=None):
             data = f[feature_name].value
     return data
 
+
+def read_wav_file(file):
+    r"""
+    Loads wav files from disk and resamples to 22050 Hz
+    The output is shaped as [timesteps, 1]
+    Parameters
+    ----------
+    file
+
+    Returns
+    -------
+
+    """
+    import librosa
+    data, sr = librosa.load(file)
+    return np.expand_dims(data, axis=-1)
+
+
 def split_multiproc(files, num_threads):
     num_files = len(files)
     average_size = int(np.floor(num_files // num_threads))
