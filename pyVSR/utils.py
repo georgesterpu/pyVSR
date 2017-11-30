@@ -126,7 +126,8 @@ def write_sequences_to_mlf(sequences, file):
         for label in sequences.keys():
             label_fname = path.splitext(path.split(label)[1])[0]
             stream.write('"*/' + label_fname + '.rec"\n')
-            for symbol in sequences[label]:
+            sequence = [c.replace("'", "\\'") for c in sequences[label]]  # replaces ' by \' to prevent HResults segflt
+            for symbol in sequence:
                 if symbol != 'EOS':
                     stream.write(symbol+'\n')
                 else:
