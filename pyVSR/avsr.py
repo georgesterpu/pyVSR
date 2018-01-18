@@ -59,9 +59,9 @@ class AVSR(object):
             extractor.extract_save_features(files)
             return
 
-        elif feature_type == 'aps':
-            from .Features import aps
-            extractor = aps.APSFeature(files=files, extractOpts=extract_opts, outDir=output_dir)
+        elif feature_type == 'roi':
+            from .Features import roi
+            extractor = roi.ROIFeature(extract_opts=extract_opts, output_dir=output_dir)
         else:
             raise Exception('Unknown feature type: ' + feature_type)
 
