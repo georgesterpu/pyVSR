@@ -4,6 +4,7 @@ import os
 import cv2
 import dlib
 import numpy as np
+from .. import utils
 
 
 class ROIFeature(Feature):
@@ -57,6 +58,11 @@ class ROIFeature(Feature):
         if 'gpu' in extract_opts:
             self._gpu = extract_opts['gpu']
 
+        if 'num_subdirs_to_file' in extract_opts:
+            self._tree_leaves = extract_opts['num_subdirs_to_file']
+        else:
+            self._tree_leaves = 5  # default for tcdtimit
+
         self._output_dir = output_dir
 
     def extract_save_features(self, file):
@@ -70,8 +76,14 @@ class ROIFeature(Feature):
         -------
 
         """
+        # Not all the fitters are pickleable for multiprocessing to work
+        # thus load the fitters for every process
         self._preload_dlib_detector_fitter()
+        roi_sequence = self.extract_roi_sequence(file)
+        outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
+        self._write_sequence_to_file(outfile, roi_sequence, 'gray', (None, None, None, None))
 
+    def extract_roi_sequence(self, file):
         stream = cv2.VideoCapture(file)
         vidframes = int(stream.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -91,7 +103,7 @@ class ROIFeature(Feature):
             face_area = dlib.rectangle(left, top, right, bottom)
             landmarks5 = self._fitter5(frame, face_area)
 
-            aligned_face = dlib.get_face_chip(frame, landmarks5, 128)
+            aligned_face = dlib.get_face_chip(frame, landmarks5, 256)
             aligned_face = np.asarray(aligned_face)
 
             face_chip_area = dlib.rectangle(0, 0, aligned_face.shape[0], aligned_face.shape[1])
