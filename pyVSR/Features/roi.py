@@ -98,27 +98,32 @@ class ROIFeature(Feature):
 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # dlib and opencv use different channel representations
 
-            bbox = self._detect(frame, 0)[0]
-            left, top, right, bottom = _get_bbox_corners(bbox, self._gpu)
-            face_area = dlib.rectangle(left, top, right, bottom)
-            landmarks5 = self._fitter5(frame, face_area)
+            detections = self._detect(frame, 0)
 
-            aligned_face = dlib.get_face_chip(frame, landmarks5, 256)
-            aligned_face = np.asarray(aligned_face)
+            if len(detections) > 0:  # else the buffer will preserve the zeros initialisation
 
-            face_chip_area = dlib.rectangle(0, 0, aligned_face.shape[0], aligned_face.shape[1])
-            landmarks68 = self._fitter68(aligned_face, face_chip_area)
+                bbox = detections[0]
+                left, top, right, bottom = _get_bbox_corners(bbox, self._gpu)
+                face_area = dlib.rectangle(left, top, right, bottom)
+                landmarks5 = self._fitter5(frame, face_area)
 
-            arr = _dlib_parts_to_numpy(landmarks68)[48:68]
-            top_left, bottom_right = _get_array_bounds(arr, aligned_face.shape, border=self._border)
+                aligned_face = dlib.get_face_chip(frame, landmarks5, 256)
+                aligned_face = np.asarray(aligned_face)
 
-            mouth_crop = aligned_face[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0], :]
-            mouth_crop = cv2.resize(mouth_crop, (self._xres, self._yres), cv2.INTER_CUBIC)
+                face_chip_area = dlib.rectangle(0, 0, aligned_face.shape[0], aligned_face.shape[1])
+                landmarks68 = self._fitter68(aligned_face, face_chip_area)
 
-            if self._channels == 3:
-                roi_seq[current_frame, :] = cv2.cvtColor(mouth_crop, cv2.COLOR_RGB2BGR) / 255
-            else:
-                roi_seq[current_frame, :] = np.expand_dims(cv2.cvtColor(mouth_crop, cv2.COLOR_RGB2GRAY) / 255, -1)
+                arr = _dlib_parts_to_numpy(landmarks68)[48:68]
+                top_left, bottom_right = _get_array_bounds(arr, aligned_face.shape, border=self._border)
+
+                mouth_crop = aligned_face[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0], :]
+                mouth_crop = cv2.resize(mouth_crop, (self._xres, self._yres), cv2.INTER_CUBIC)
+
+                if self._channels == 3:
+                    roi_seq[current_frame, :] = cv2.cvtColor(mouth_crop, cv2.COLOR_RGB2BGR) / 255
+                else:
+                    roi_seq[current_frame, :] = np.expand_dims(cv2.cvtColor(mouth_crop, cv2.COLOR_RGB2GRAY) / 255, -1)
+
 
             # Enable these when debugging
             # cv2.imshow('', roi_seq[current_frame, :])
