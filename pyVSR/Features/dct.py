@@ -97,6 +97,7 @@ class DCTFeature(Feature):
         file: `str`, path to a .h5 file storing the DCT matrix
         process_opts : `dict` holding the post-processing configuration
             Must specify the following options:
+            ``compute_dct`` : `boolean`, applies the DCT transform on the stored data
             ``mask`` : `str`, specifies which DCT coefficients should be kept
                 Example: a mask of '1-44` will keep 44 coefficients, discarding the bias term
                 The coefficients are chosen in a zig-zag pattern from the top-left corner
@@ -115,7 +116,12 @@ class DCTFeature(Feature):
         -------
         A dictionary of one key: `DCT`, holding the DCT-based feature
         """
-        dct = self._load_h5_file(file, 'dct')
+
+        data = self._load_h5_file(file, 'pixels')
+        if process_opts['compute_dct'] is True:
+            dct = _compute_frame_dct(data)
+        else:
+            dct = data
         frames, rows, cols = dct.shape
 
         mask = process_opts['mask']
@@ -628,3 +634,22 @@ def _get_pointcloud_bounds(pointcloud, boundary_proportion):
     y_min, x_min = bounds[0]
     y_delta, x_delta = bounds[1] - bounds[0]
     return [int(x_min), int(y_min), int(x_delta), int(y_delta)]
+
+
+def _compute_frame_dct(data):
+
+    num_frames = data.shape[0]
+    num_channels = data.shape[-1]
+
+    dct = np.zeros(shape=data.shape[:-1])
+
+    for i in range(num_frames):
+        frame = data[i, :]
+        if num_channels == 3:
+            gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        else:
+            gray = np.squeeze(frame)
+
+        dct[i, :, :] = cv2.dct(gray)
+
+    return dct
