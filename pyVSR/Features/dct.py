@@ -117,7 +117,7 @@ class DCTFeature(Feature):
         A dictionary of one key: `DCT`, holding the DCT-based feature
         """
 
-        data = self._load_h5_file(file, 'pixels')
+        data = self._load_h5_file(file, 'sequence')
         if process_opts['compute_dct'] is True:
             dct = _compute_frame_dct(data)
         else:
@@ -207,17 +207,17 @@ class DCTFeature(Feature):
 
             dct = self._compute_3d_dct(file)
             outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
-            self._write_sequence_to_file(outfile, dct, 'dct', (None, None, None))
+            self._write_sequence_to_file(outfile, dct, 'sequence', (None, None, None))
 
         elif self._roiExtraction == 'rgb':
             rgb = self._get_rois_opencv(file, mode='rgb')
             outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
-            self._write_sequence_to_file(outfile, rgb, 'rgb', (None, None, None, 3))
+            self._write_sequence_to_file(outfile, rgb, 'sequence', (None, None, None, 3))
 
         elif self._roiExtraction == 'gray':
             gray = self._get_rois_opencv(file, mode='gray')
             outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
-            self._write_sequence_to_file(outfile, gray, 'gray', (None, None, None))
+            self._write_sequence_to_file(outfile, gray, 'sequence', (None, None, None))
 
         else:
             return

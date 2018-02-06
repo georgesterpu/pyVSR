@@ -81,7 +81,7 @@ class ROIFeature(Feature):
         self._preload_dlib_detector_fitter()
         roi_sequence = self.extract_roi_sequence(file)
         outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
-        self._write_sequence_to_file(outfile, roi_sequence, 'gray', (None, None, None, None))
+        self._write_sequence_to_file(outfile, roi_sequence, 'sequence', (None, None, None, None))
 
     def extract_roi_sequence(self, file):
         stream = cv2.VideoCapture(file)
