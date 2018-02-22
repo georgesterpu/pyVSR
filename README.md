@@ -24,6 +24,7 @@ The main goal of pyVSR is to easily reproduce VSR experiments in order to have a
 ### 2. Extract visual features:
   * Discrete Cosine Transform (DCT)
     * Automatic ROI extraction (grayscale, RGB, DCT)
+    * Face alignment (from 5 stable landmarks)
     * Configurable window size
     * Fourth order accurate derivatives
     * Sample rate interpolation
@@ -60,46 +61,46 @@ train, test = tcdtimit.files.request_files(
 ```
 
 ##### 2. Extract DCT Features
-First store the full DCT sequences:
+First store the full ROI sequences:
 ```python
 import pyVSR
 experiment = pyVSR.AVSR(num_threads=4)  
 
 experiment.extract_save_features(
         files=train+test,
-        feature_type='dct',
+        feature_type='roi',
         extract_opts={
-            'roi_extraction': 'dct',
-            'need_coords': True,
-            'boundary_proportion': 0.7,
-            'video_backend': 'menpo',
-            'roi_dir': './run/features/roi/',
-            'window_size': (36, 36)
+            'align': True,
+            'gpu': True,
+            'color': False,
+            'border': 15,
+            'window_size': (36, 36),
         },
-        output_dir='./run/features/dct/'
+        output_dir='./run/features/roi_gray/'
     )
 ```
 
-Then post-process the DCT coefficients and write .htk binary files:
+Then compute the DCT coefficients on the fly and write .htk binary files:
 
 ```python
 features_train = files_to_features(train, extension='.h5')
 features_test = files_to_features(test, extension='.h5')
 
 experiment.process_features_write_htk(
-    files=features_train + features_test,
-    feature_dir='./run/features/dct/',
-    feature_type='dct',
-    process_opts={
-        'mask': '1-44',
-        'keep_basis': True,
-        'delta': True,
-        'double_delta': True,
-        'deriv_order': 'fourth',
-        'interp_factor': 2,
-        'interp_type': 'cubic'},
-    frame_rate=30,
-    out_dir='./run/features/htk_dct/')
+        files=dct_train + dct_test,
+        feature_dir='./run/features/roi_gray/',
+        feature_type='dct',
+        process_opts={
+            'compute_dct': True,
+            'mask': '1-44',
+            'keep_basis': True,
+            'delta': True,
+            'double_delta': True,
+            'derivative_order': 'first',
+            'interpolation_factor': 1},
+        frame_rate=30,
+        output_dir='./run/features/htk_dct_gray/'
+    )
 ```
 
 ##### 3. Get facial landmarks estimates

@@ -14,7 +14,7 @@ def main():
     experiment = pyVSR.AVSR(num_threads=1)
 
     experiment.extract_save_features(
-        files=train+test,
+        files=train + test,
         feature_type='roi',
         extract_opts={
             'align': True,
