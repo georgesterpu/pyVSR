@@ -91,7 +91,6 @@ class ROIFeature(Feature):
 
         self._write_sequence_to_file(outfile, roi_sequence, 'sequence', (None, None, None, None))
 
-
     def extract_roi_sequence(self, file):
         stream = cv2.VideoCapture(file)
         vidframes = int(stream.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -138,7 +137,8 @@ class ROIFeature(Feature):
                 if self._channels == 3:
                     roi_seq[current_frame, :] = cv2.cvtColor(mouth_crop_resized, cv2.COLOR_RGB2BGR) / 255
                 else:
-                    roi_seq[current_frame, :] = np.expand_dims(cv2.cvtColor(mouth_crop_resized, cv2.COLOR_RGB2GRAY) / 255, -1)
+                    gray_roi = cv2.cvtColor(mouth_crop_resized, cv2.COLOR_RGB2GRAY) / 255
+                    roi_seq[current_frame, :] = np.expand_dims(gray_roi, -1)
 
             # # Enable these when debugging # #
             # cv2.imshow('', roi_seq[current_frame, :])
@@ -173,7 +173,7 @@ class ROIFeature(Feature):
     def _write_sequence_to_file(self, file, seq, seq_name, seq_shape):
         import h5py
 
-        f = h5py.File(os.path.join(self._output_dir,file), 'w')
+        f = h5py.File(os.path.join(self._output_dir, file), 'w')
         f.create_dataset(seq_name, data=seq.astype('float32'),
                          maxshape=seq_shape,
                          compression="gzip",
