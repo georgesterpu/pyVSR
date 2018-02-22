@@ -32,6 +32,8 @@ class ROIFeature(Feature):
             Must specify the following options:
             ``gpu`` : `boolean`, whether to use the dlib's CNN-based face detector (`True`)
                         or the traditional dlib HOG-based face detector (`False`)
+            ``align``: `boolean`, if True (default), it uses dlib face alignment based on 5
+                        stable landmarks
             ``color`` : `boolean`, store RGB images (`True`) or grayscale images (`False`)
             ``border`` : `int`, number of pixels to pad the tightly-cropped mouth region
             ``window_size`` : `tuple` of two `ints`, one for each image dimension
