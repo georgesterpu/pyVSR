@@ -245,9 +245,53 @@ def read_sentence_labels(filename, unit='viseme'):
     with open(transcript, 'r') as f:
         contents = f.read()
 
-    start = contents.find(file)
-    end = contents.find('.\n', start)
-    sentence_transcript = contents[start:end].splitlines()[1:]
+    # start = contents.find(file)
+    # end = contents.find('.\n', start)
+    # sentence_transcript = contents[start:end].splitlines()[1:]
+    #
+    # label_seq = [item.split()[-1] for item in sentence_transcript]
+    # return label_seq
+    return _get_transcript_from_buffer(contents, file)
+
+
+def read_all_sentences_labels(filenames, unit='viseme'):
+    r"""
+    Multi-file version of `read_sentence_labels`
+    which prevents reading the ground truth file multiple times
+    Parameters
+    ----------
+    filenames
+    unit
+
+    Returns
+    -------
+
+    """
+
+    if unit == 'viseme':
+        transcript = viseme_file
+    elif unit == 'phoneme':
+        transcript = phoneme_file
+    elif unit == 'character':
+        transcript = character_file
+    else:
+        raise Exception('only `viseme`, `phoneme` and `character` unit transcriptions are supported')
+
+    with open(transcript, 'r') as f:
+        contents = f.read()
+
+    labels = {}
+    for filename in filenames:
+        file = path.splitext(path.split(filename)[1])[0]
+        labels[filename] = _get_transcript_from_buffer(contents, file)
+
+    return labels
+
+
+def _get_transcript_from_buffer(buffer, file):
+    start = buffer.find(file)
+    end = buffer.find('.\n', start)
+    sentence_transcript = buffer[start:end].splitlines()[1:]
 
     label_seq = [item.split()[-1] for item in sentence_transcript]
     return label_seq
