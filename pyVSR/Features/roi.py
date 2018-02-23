@@ -85,9 +85,14 @@ class ROIFeature(Feature):
         """
         # Not all the fitters are pickleable for multiprocessing to work
         # thus load the fitters for every process
+
+        outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
+        if os.path.isfile(os.path.join(self._output_dir, outfile)):
+            return
+
         self._preload_dlib_detector_fitter()
         roi_sequence = self.extract_roi_sequence(file)
-        outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
+
 
         self._write_sequence_to_file(outfile, roi_sequence, 'sequence', (None, None, None, None))
 
