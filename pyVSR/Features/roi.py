@@ -36,7 +36,7 @@ class ROIFeature(Feature):
                         stable landmarks
             ``color`` : `boolean`, store RGB images (`True`) or grayscale images (`False`)
             ``border`` : `int`, number of pixels to pad the tightly-cropped mouth region
-            ``window_size`` : `tuple` of two `ints`, one for each image dimension
+            ``window_size`` : `tuple` of two `ints`, one for each image dimension (width, height)
                 Represents the sub-sampled ROI window size, hence the full DCT matrix has the same shape
         output_dir
         """
