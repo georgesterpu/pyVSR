@@ -22,8 +22,7 @@ class ROIFeature(Feature):
     """
 
     def __init__(self,
-                 extract_opts=None,
-                 output_dir=None):
+                 extract_opts=None):
         r"""
 
         Parameters
@@ -65,14 +64,7 @@ class ROIFeature(Feature):
         if 'gpu' in extract_opts:
             self._gpu = extract_opts['gpu']
 
-        if 'num_subdirs_to_file' in extract_opts:
-            self._tree_leaves = extract_opts['num_subdirs_to_file']
-        else:
-            self._tree_leaves = 5  # default for tcdtimit
-
-        self._output_dir = output_dir
-
-    def extract_save_features(self, file):
+    def extract_save_features(self, example):
         r"""
 
         Parameters
@@ -86,15 +78,17 @@ class ROIFeature(Feature):
         # Not all the fitters are pickleable for multiprocessing to work
         # thus load the fitters for every process
 
-        outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
-        if os.path.isfile(os.path.join(self._output_dir, outfile)):
-            return
+        # outfile = utils.file_to_feature(file, extension='.h5', tree_leaves=self._tree_leaves)
+        # if os.path.isfile(os.path.join(self._output_dir, outfile)):
+        #     return
+
+        input_file = example[0]
+        output_file = example[1]
 
         self._preload_dlib_detector_fitter()
-        roi_sequence = self.extract_roi_sequence(file)
+        roi_sequence = self.extract_roi_sequence(input_file)
 
-
-        self._write_sequence_to_file(outfile, roi_sequence, 'sequence', (None, None, None, None))
+        _write_sequence_to_file(output_file, roi_sequence, 'sequence', (None, None, None, None))
 
     def extract_roi_sequence(self, file):
         stream = cv2.VideoCapture(file)
@@ -116,7 +110,8 @@ class ROIFeature(Feature):
             if len(detections) > 0:  # else the buffer will preserve the zeros initialisation
 
                 bbox = detections[0]
-                left, top, right, bottom = _get_bbox_corners(bbox, self._gpu)
+                left, top, right, bottom = _get_bbox_corners(bbox, frame.shape, self._gpu)
+                # print(left, top, right, bottom, frame.shape)
 
                 if self._align is True:
                     face_coords = dlib.rectangle(left, top, right, bottom)
@@ -128,7 +123,7 @@ class ROIFeature(Feature):
                 else:
 
                     face_img = frame[top:bottom, left:right]
-                    face_img = cv2.resize(face_img, (256, 256), interpolation=cv2.INTER_AREA)
+                    face_img = cv2.resize(face_img, (160, 160), interpolation=cv2.INTER_CUBIC)
 
                 face_chip_area = dlib.rectangle(0, 0, face_img.shape[0], face_img.shape[1])
                 landmarks68 = self._fitter68(face_img, face_chip_area)
@@ -147,7 +142,7 @@ class ROIFeature(Feature):
 
             # # Enable these when debugging # #
             # cv2.imshow('', roi_seq[current_frame, :])
-            # cv2.waitKey(1)
+            # cv2.waitKey(30)
 
             current_frame += 1
 
@@ -175,17 +170,19 @@ class ROIFeature(Feature):
     def get_feature(self, file, feat_opts):
         pass
 
-    def _write_sequence_to_file(self, file, seq, seq_name, seq_shape):
-        import h5py
 
-        f = h5py.File(os.path.join(self._output_dir, file), 'w')
-        f.create_dataset(seq_name, data=seq.astype('float32'),
-                         maxshape=seq_shape,
-                         compression="gzip",
-                         fletcher32=True)
-        f.close()
+def _write_sequence_to_file(file, seq, seq_name, seq_shape):
+    import h5py
 
-        return
+    os.makedirs(os.path.dirname(file), exist_ok=True)
+    f = h5py.File(file, 'w')
+    f.create_dataset(seq_name, data=seq.astype('float32'),
+                     maxshape=seq_shape,
+                     compression="gzip",
+                     fletcher32=True)
+    f.close()
+
+    return
 
 
 def maybe_download_models():
@@ -239,10 +236,14 @@ def _get_array_bounds(arr, outer_shape, border=0):
     return tuple(top_left), tuple(bottom_right)
 
 
-def _get_bbox_corners(bbox, gpu):
+def _get_bbox_corners(bbox, frame_shape, gpu):
     if gpu is True:
         left, top, right, bottom = bbox.rect.left(), bbox.rect.top(), bbox.rect.right(), bbox.rect.bottom()
     else:
         left, top, right, bottom = bbox.left(), bbox.top(), bbox.right(), bbox.bottom()
+
+    # clip values
+    left, top = (np.maximum(left, 0), np.maximum(top, 0))
+    right, bottom = (np.minimum(right, frame_shape[1]), np.minimum(bottom, frame_shape[0]))
 
     return left, top, right, bottom

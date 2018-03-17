@@ -17,10 +17,9 @@ class AVSR(object):
         self._nThreads = num_threads
 
     def extract_save_features(self,
-                              files=(),
+                              files_dict,
                               feature_type=None,
-                              extract_opts=None,
-                              output_dir=None):
+                              extract_opts=None,):
 
         r"""
 
@@ -35,9 +34,6 @@ class AVSR(object):
         -------
 
         """
-
-        makedirs(output_dir, exist_ok=True)
-
         if feature_type == 'dct':
             from .Features import dct
             extractor = dct.DCTFeature(extract_opts,
@@ -61,12 +57,12 @@ class AVSR(object):
 
         elif feature_type == 'roi':
             from .Features import roi
-            extractor = roi.ROIFeature(extract_opts=extract_opts, output_dir=output_dir)
+            extractor = roi.ROIFeature(extract_opts=extract_opts)
         else:
             raise Exception('Unknown feature type: ' + feature_type)
 
         with Pool(self._nThreads) as p:
-            p.map(extractor.extract_save_features, files)
+            p.map(extractor.extract_save_features, files_dict.items())
 
     def process_features_write_htk(self,
                                    files=(),
