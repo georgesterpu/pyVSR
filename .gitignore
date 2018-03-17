@@ -105,3 +105,10 @@ ENV/
 .dat
 .pkl
 
+# pyVSR
+bins/
+pretrained/
+results/
+stored_models/
+run/
+

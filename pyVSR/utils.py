@@ -88,7 +88,7 @@ def read_hdf5_file(file, feature_name=None):
     return data
 
 
-def read_wav_file(file):
+def read_wav_file(file, sr=22050):
     r"""
     Loads wav files from disk and resamples to 22050 Hz
     The output is shaped as [timesteps, 1]
@@ -101,7 +101,7 @@ def read_wav_file(file):
 
     """
     import librosa
-    data, sr = librosa.load(file)
+    data, sr = librosa.load(file, sr)
     return np.expand_dims(data, axis=-1)
 
 
@@ -124,8 +124,8 @@ def write_sequences_to_mlf(sequences, file):
     with open(file, 'w') as stream:
         stream.write('#!MLF!#\n')
         for label in sequences.keys():
-            label_fname = path.splitext(path.split(label)[1])[0]
-            stream.write('"*/' + label_fname + '.rec"\n')
+            # label_fname = path.splitext(path.split(label)[1])[0]
+            stream.write('"*/' + label + '.rec"\n')
             sequence = [c.replace("'", "\\'") for c in sequences[label]]  # replaces ' by \' to prevent HResults segflt
             for symbol in sequence:
                 if symbol != 'EOS':

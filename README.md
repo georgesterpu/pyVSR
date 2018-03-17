@@ -48,6 +48,9 @@ The main goal of pyVSR is to easily reproduce VSR experiments in order to have a
   * pyVSR has a simple, modular, object-oriented architecture
 
 # Examples
+
+## The examples shown here or in the python scripts are no longer functional and maintained, please check the documentation of each Class for the updated API'
+
 ##### 1. Loading dataset files
 ```python
 from pyVSR import tcdtimit

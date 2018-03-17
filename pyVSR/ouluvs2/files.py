@@ -8,12 +8,19 @@ def request_files(dataset_dir,
                   protocol='speaker_independent',
                   speaker_id=None,
                   view_id='1',
-                  utterance_types='dst'):
+                  utterance_types='dst',
+                  content='video'):
 
     if protocol == 'single_speaker':
         train, test = _preload_files_single_volunteer(dataset_dir, speaker_id, view_id, utterance_types)
     elif protocol == 'speaker_independent':
         train, test = _preload_files_speaker_independent(dataset_dir, view_id, utterance_types)
+        if content == 'audio':
+            import re
+            train = [re.sub('_v\d_', '_', file) for file in train]
+            train = [re.sub('.mp4', '.wav', file) for file in train]
+            test = [re.sub('_v\d_', '_', file) for file in test]
+            test = [re.sub('.mp4', '.wav', file) for file in test]
     else:
         raise Exception('undefined dataset split protocol')
 
@@ -43,8 +50,8 @@ def _preload_files_single_volunteer(dataset_dir, speaker_id, view_id, utterance_
 
 def _preload_files_speaker_independent(dataset_dir, view_id, utterance_types):
 
-    train_script = path.join(_current_path, 'splits/speaker_independent/train.scp')
-    test_script = path.join(_current_path, 'splits/speaker_independent/test.scp')
+    train_script = path.join(_current_path, 'splits/speaker_independent/train2.scp')
+    test_script = path.join(_current_path, 'splits/speaker_independent/test2.scp')
 
     u_list = _gen_utterance_list(utterance_types)
 
@@ -78,3 +85,35 @@ def _gen_utterance_list(utype):
     u_list = ['u' + str(u) + '.' for u in u_list]
 
     return u_list
+
+
+def read_sentence_labels(file, unit='character'):
+
+    with open(path.join(_current_path, 'configs', 'labels'), 'r') as f:
+        contents = f.read().splitlines()
+
+    labels_dict = dict([(line.split(' ', 1)) for line in contents])
+
+    sentence = labels_dict[file]
+
+    parsed_sentence = sentence.replace(' ', '_')
+    parsed_sentence = parsed_sentence.lower()
+
+    return str(parsed_sentence)
+
+
+def read_all_sentences_labels():
+    with open(path.join(_current_path, 'configs', 'labels'), 'r') as f:
+        contents = f.read().splitlines()
+
+    labels_dict = dict([(line.split(' ', 1)) for line in contents])
+
+    parsed_dict = {}
+    for (k,v) in labels_dict.items():
+        parsed_sentence = v.replace(' ', '_')
+        parsed_sentence = parsed_sentence.lower()
+        parsed_dict[k] = list(parsed_sentence)
+
+    return parsed_dict
+
+
