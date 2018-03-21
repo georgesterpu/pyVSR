@@ -14,7 +14,7 @@ def main():
 
     file_dict = dict()
     output_dir = './run/features/roi/'
-    for file in (train+test)[:20]:
+    for file in (train+test):
         file_dict[file] = path.join(
             output_dir,
             path.splitext(file.split('tcdtimit/')[-1])[0] + '.h5')

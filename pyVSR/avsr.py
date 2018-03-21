@@ -36,16 +36,15 @@ class AVSR(object):
         """
         if feature_type == 'dct':
             from .Features import dct
-            extractor = dct.DCTFeature(extract_opts)
+            extractor = dct.DCTFeature()
         elif feature_type == 'landmarks':
             from .Features import landmark
-            extractor = landmark.LandmarkFeature(files, extract_opts)
+            extractor = landmark.LandmarkFeature(extract_opts)
         elif feature_type == 'aam':
             from .Features import aam
             extractor = aam.AAMFeature(extract_opts=extract_opts, output_dir=output_dir)
             extractor.extract_save_features(files)
             return
-
         elif feature_type == 'roi':
             from .Features import roi
             extractor = roi.ROIFeature(extract_opts=extract_opts)
@@ -177,6 +176,8 @@ def _write_feature_to_htk(features,
 def _process_one_file(file, processor, process_opts, out_dir, frame_rate):
     input_file = file[0]
     output_file = file[1]
+
+    print(input_file)
 
     feature_dict = processor.get_feature(input_file, process_opts)
 
