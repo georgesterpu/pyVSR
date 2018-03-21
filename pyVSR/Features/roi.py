@@ -64,6 +64,8 @@ class ROIFeature(Feature):
         if 'gpu' in extract_opts:
             self._gpu = extract_opts['gpu']
 
+        self._detector_path, self._predictor5_path, self._predictor68_path = maybe_download_models()
+
     def extract_save_features(self, example):
         r"""
 
@@ -157,15 +159,14 @@ class ROIFeature(Feature):
         -------
 
         """
-        detector_path, predictor5_path, predictor68_path = maybe_download_models()
 
         if self._gpu is True:
-            self._detect = dlib.cnn_face_detection_model_v1(detector_path)
+            self._detect = dlib.cnn_face_detection_model_v1(self._detector_path)
         else:
             self._detect = dlib.get_frontal_face_detector()
 
-        self._fitter5 = dlib.shape_predictor(predictor5_path)
-        self._fitter68 = dlib.shape_predictor(predictor68_path)
+        self._fitter5 = dlib.shape_predictor(self._predictor5_path)
+        self._fitter68 = dlib.shape_predictor(self._predictor68_path)
 
     def get_feature(self, file, feat_opts):
         pass
