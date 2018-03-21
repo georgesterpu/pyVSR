@@ -91,21 +91,20 @@ class AVSR(object):
                       zip(files.items(), repeat(processor), repeat(process_opts), repeat(output_dir), repeat(frame_rate)))
 
 
-def run(train_files=(),
-        test_files=(),
-        feature_dir=None,
+def run(train_files=None,
+        test_files=None,
         hmm_states=None,
         mixtures=None,
         language_model=False,
         config_dir=None,
         experiment_name=None,
-        report_results=('train', 'test')
+        report_results=('train', 'test'),
+        num_threads=1,
         ):
     r"""
 
     :param train_files:
     :param test_files:
-    :param feature_dir:
     :param hmm_states:
     :param mixtures:
     :param language_model:
@@ -118,18 +117,19 @@ def run(train_files=(),
     
     htksys = htk.HTKSys(train_files,
                         test_files,
-                        feature_dir,
                         hmm_states=hmm_states,
                         mixtures=mixtures,
                         language_model=language_model,
                         config_dir=config_dir,
-                        report_results=report_results)
+                        report_results=report_results,
+                        num_threads=num_threads)
     htksys.run()
 
     # TODO - wrap the code below in a function
 
-    fld = path.split(path.split(feature_dir)[0])[1]
-    fld = './results/' + str(experiment_name) + '/' + fld + '_' + str(hmm_states) + 'states/'
+    fld = path.join('./results/',
+                    str(experiment_name),
+                    str(hmm_states) + 'states/')
     makedirs(fld, exist_ok=True)
 
     from glob import glob
