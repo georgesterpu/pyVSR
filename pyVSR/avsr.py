@@ -13,19 +13,19 @@ class AVSR(object):
     2) postprocessing the features and writing .htk feature files
     3) launching a HTK-based recognition experiment
     """
-    def __init__(self, num_threads=8):
+    def __init__(self, num_threads=4):
         self._nThreads = num_threads
 
     def extract_save_features(self,
-                              files_dict,
+                              files,
                               feature_type=None,
-                              extract_opts=None,):
+                              extract_opts=None, ):
 
         r"""
 
         Parameters
         ----------
-        files : `tuple` of video file paths
+        files : `tuple` or 'list` of video file paths
         feature_type : `dct` or `aam` are currently supported
         extract_opts : ``dict` holding the configuration for feature extraction
         output_dir
@@ -36,19 +36,10 @@ class AVSR(object):
         """
         if feature_type == 'dct':
             from .Features import dct
-            extractor = dct.DCTFeature(extract_opts,
-                                       output_dir)
-        elif feature_type == 'pca':
-            from .Features import pca
-            extractor = pca.PCAFeature(files,
-                                       extract_opts,
-                                       output_dir)
+            extractor = dct.DCTFeature(extract_opts)
         elif feature_type == 'landmarks':
             from .Features import landmark
-            extractor = landmark.LandmarkFeature(files,
-                                                 extract_opts,
-                                                 output_dir)
-
+            extractor = landmark.LandmarkFeature(files, extract_opts)
         elif feature_type == 'aam':
             from .Features import aam
             extractor = aam.AAMFeature(extract_opts=extract_opts, output_dir=output_dir)
@@ -62,10 +53,10 @@ class AVSR(object):
             raise Exception('Unknown feature type: ' + feature_type)
 
         with Pool(self._nThreads) as p:
-            p.map(extractor.extract_save_features, files_dict.items())
+            p.map(extractor.extract_save_features, files.items())
 
     def process_features_write_htk(self,
-                                   files=(),
+                                   files,
                                    feature_dir=None,
                                    feature_type=None,
                                    process_opts=None,
@@ -87,15 +78,9 @@ class AVSR(object):
         -------
 
         """
-        makedirs(output_dir, exist_ok=True)
         if feature_type == 'dct':
             from .Features import dct
             processor = dct.DCTFeature(feature_dir=feature_dir)
-        elif feature_type == 'pca':
-            from .Features import pca
-            processor = pca.PCAFeature(vidFiles=(files,),
-                                       featDir=feature_dir)
-            # extractor.fitData(featOpts)
         elif feature_type == 'aam':
             from .Features import aam
             processor = aam.AAMFeature(process_opts=process_opts)
@@ -104,7 +89,7 @@ class AVSR(object):
 
         with Pool(self._nThreads) as p:
             p.starmap(_process_one_file,
-                      zip(files, repeat(processor), repeat(process_opts), repeat(output_dir), repeat(frame_rate)))
+                      zip(files.items(), repeat(processor), repeat(process_opts), repeat(output_dir), repeat(frame_rate)))
 
 
 def run(train_files=(),
@@ -156,7 +141,6 @@ def run(train_files=(),
 
 
 def _write_feature_to_htk(features,
-                          out_dir,
                           file,
                           frame_rate):
 
@@ -167,12 +151,7 @@ def _write_feature_to_htk(features,
     from struct import pack
     num_frames, feature_size = np.shape(features)
 
-    if path.isabs(file):  # case of AAM
-        output_filename = file_to_feature(file, extension='.htk')
-    else:  # case of DCT
-        output_filename = path.splitext(file)[0] + '.htk'
-
-    outfile = open(out_dir + output_filename, 'wb')
+    outfile = open(file, 'wb')
 
     num_samples = np.size(features)
     sample_period = int(1 / frame_rate * (10 ** 7))
@@ -196,11 +175,13 @@ def _write_feature_to_htk(features,
 
 
 def _process_one_file(file, processor, process_opts, out_dir, frame_rate):
-    feature_dict = processor.get_feature(file, process_opts)
+    input_file = file[0]
+    output_file = file[1]
+
+    feature_dict = processor.get_feature(input_file, process_opts)
 
     for feature_name, feature_value in feature_dict.items():
-        makedirs(out_dir + feature_name + '/', exist_ok=True)
-        _write_feature_to_htk(feature_value,
-                              out_dir + feature_name + '/',
-                              file,
-                              frame_rate)
+        makedirs(path.dirname(output_file), exist_ok=True)
+        _write_feature_to_htk(features=feature_value,
+                              file=output_file,
+                              frame_rate=frame_rate)
