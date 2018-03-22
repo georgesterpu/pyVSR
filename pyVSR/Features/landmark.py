@@ -101,14 +101,13 @@ class LandmarkFeature(Feature):
                 g.writelines(write_buffer)
 
 
-def landmark_filter(file, landmark_dir, threshold, keep):
+def landmark_filter(file, file_dict, threshold, keep):
     r"""
     From a video file, it keeps only the frames above a landmark confidence threshold
     A further uniform sampling is done to retain only the `keep` proportion of images
     Parameters
     ----------
     file
-    landmark_dir
     threshold
     keep
 
@@ -117,9 +116,9 @@ def landmark_filter(file, landmark_dir, threshold, keep):
 
     """
 
-    pts_file = utils.file_to_feature(file, extension='.full.pts')
+    csv_file = file_dict[file] + '.csv'
 
-    with open(landmark_dir + pts_file, 'r') as f:
+    with open(csv_file, 'r') as f:
         contents = f.read().splitlines()
 
     frames_idx_above_thresh = _landmark_confidence_filter(contents, threshold)
@@ -147,8 +146,8 @@ def _landmark_confidence_filter(contents, threshold):
 
     """
 
-    confidence_id = 2
-    success_id = 3
+    confidence_id = 3
+    success_id = 4
 
     filtered = []
 

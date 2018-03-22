@@ -19,7 +19,8 @@ class AVSR(object):
     def extract_save_features(self,
                               files,
                               feature_type=None,
-                              extract_opts=None, ):
+                              extract_opts=None,
+                              output_dir=None):
 
         r"""
 
@@ -42,7 +43,7 @@ class AVSR(object):
             extractor = landmark.LandmarkFeature(extract_opts)
         elif feature_type == 'aam':
             from .Features import aam
-            extractor = aam.AAMFeature(extract_opts=extract_opts, output_dir=output_dir)
+            extractor = aam.AAMFeature(files=files, extract_opts=extract_opts, output_dir=output_dir)
             extractor.extract_save_features(files)
             return
         elif feature_type == 'roi':
@@ -56,11 +57,9 @@ class AVSR(object):
 
     def process_features_write_htk(self,
                                    files,
-                                   feature_dir=None,
                                    feature_type=None,
                                    process_opts=None,
                                    frame_rate=30,
-                                   output_dir=None,
                                    ):
         r"""
         Writes features to .htk format
@@ -71,7 +70,6 @@ class AVSR(object):
         feature_type : `str`, : 'dct','landmark', 'aam'
         process_opts : `dict` holding the configuration for feature processing
         frame_rate : `float`
-        output_dir : `str`, path to store the extracted features
 
         Returns
         -------
@@ -79,16 +77,16 @@ class AVSR(object):
         """
         if feature_type == 'dct':
             from .Features import dct
-            processor = dct.DCTFeature(feature_dir=feature_dir)
+            processor = dct.DCTFeature()
         elif feature_type == 'aam':
             from .Features import aam
-            processor = aam.AAMFeature(process_opts=process_opts)
+            processor = aam.AAMFeature(files=files, process_opts=process_opts)
         else:
             raise Exception('Unknown feature type: ' + feature_type)
 
         with Pool(self._nThreads) as p:
             p.starmap(_process_one_file,
-                      zip(files.items(), repeat(processor), repeat(process_opts), repeat(output_dir), repeat(frame_rate)))
+                      zip(files.items(), repeat(processor), repeat(process_opts), repeat(frame_rate)))
 
 
 def run(train_files=None,
@@ -173,7 +171,7 @@ def _write_feature_to_htk(features,
     outfile.close()
 
 
-def _process_one_file(file, processor, process_opts, out_dir, frame_rate):
+def _process_one_file(file, processor, process_opts, frame_rate):
     input_file = file[0]
     output_file = file[1]
 

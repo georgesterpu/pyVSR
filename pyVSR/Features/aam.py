@@ -11,6 +11,8 @@ from os import path
 from .landmark import landmark_filter
 from menpofit.dlib import DlibWrapper
 from menpo.shape import PointCloud
+from os import makedirs
+from .roi import maybe_download_models
 
 current_path = path.abspath(path.dirname(__file__))
 
@@ -19,11 +21,12 @@ class AAMFeature(Feature):
     r"""
     Active Appearance Model (AAM) feature extraction
     """
-    def __init__(self, extract_opts=None, process_opts=None, output_dir=None):
+    def __init__(self, files, extract_opts=None, process_opts=None, output_dir=None):
         r"""
 
         Parameters
         ----------
+        files : `dict` holding (video_file, landmark directory) pairs
         extract_opts : `dict` holding the configuration for feature extraction
             For complete description of some parameters, please refer upstream
              to their documentation in the menpofit project
@@ -47,7 +50,6 @@ class AAMFeature(Feature):
             ``features`` : `no_op`, `hog`, `dsift`, `fast_dsift`
                 `no_op` uses the image pixels for the texture model
                 `hog, dsift, fast_dsift` extract popular image descriptors instead
-            ``landmark_dir`` : `str`, directory containing the facial landmarks for the training images
             ``landmark_group`` : `pts_face`, `pts_chin`, `pts_lips`
                 `pts_face` constructs a full facial model using all the 68 landmark points
                 `pts_chin` uses landmarks [2:15) plus [48:68) to model the chin and lips region
@@ -68,15 +70,16 @@ class AAMFeature(Feature):
             ``face_detector`` : `dlib` or `opencv` or `dpm`
                 Selects the implementation that detects a face in an image
                 `dlib` is the fastest, `dpm` may be more accurate (check G.Chrysos, Feb 2017)
-            ``landmark_fitter : `aam` or `ert`
+            ``landmark_fitter`` : `aam` or `ert`
                 Selects the algorithm that fits the landmarks on a detected face
                 `ert` uses a model pre-trained on challenging datasets
                 `aam` may use your own model
             ``aam_fitter`` : `str`, full file name storing an AAM pickle to be used for landmark fitting
                 Mandatory if ``landmark_fitter`` is AAM
-            ``parameters_from`` : `fitting`, `projection`
-                If `fitting`, the shape and appearance parameters optimized by the Lukas-Kanade fitting algorithm
-                are returned. If `projection`, only the final shape of the fitting process will be used, initializing
+            ``parameters_from`` : `lk_fitting`, `aam_projection`
+                If `lk_fitting`, the shape and appearance parameters optimized by the Lukas-Kanade fitting algorithm
+                are returned. In this case, `landmark_fitter` must be `aam`.
+                If `aam_projection`, only the final shape of the fitting process will be used, initializing
                 another fitter based on a new AAM specified below
             `` projection_aam`` : `str`, full file name storing an AAM pickle to be used in the process described above
             ``shape`` : `face`, `chin` or `lips`
@@ -100,9 +103,6 @@ class AAMFeature(Feature):
             ``max_iters`` : `int` or `list` of `ints` (one per resolution scale)
                 Selects the number of iterations (per resolution scale) of the optimisation algorithm
                 Only used for the fitter AAM, since 0 iterations are used with the projection AAM
-            ``landmark_dir`` : `str`, directory containing the ground-truth facial landmarks
-                for every frame of each video. Used only to compute an error between prediction and ground-truth.
-                Can be `None` if the error log is not necessary
             ``log_errors`` : `boolean`
                 If ``True``, generates a log file per video, stating the models used
                 and the prediction error for each frame
@@ -110,12 +110,12 @@ class AAMFeature(Feature):
 
         output_dir : `str`, absolute path where the features are to be stored
         """
+        self._files = files
         self._outDir = output_dir
         if extract_opts is not None:
             self._extractOpts = extract_opts
 
             self._warpType = extract_opts['warp']
-            self._landmarkDir = extract_opts['landmark_dir']
             self._landmarkGroup = extract_opts['landmark_group']
             self._max_shape_components = extract_opts['max_shape_components']
             self._max_appearance_components = extract_opts['max_appearance_components']
@@ -183,7 +183,6 @@ class AAMFeature(Feature):
                 pass
 
             self._confidence_thresh = process_opts['confidence_thresh']
-            self._landmarkDir = process_opts['landmark_dir']
 
             self._shape = process_opts['shape']
             self._part_aam = process_opts['part_aam']
@@ -207,15 +206,16 @@ class AAMFeature(Feature):
         """
 
         # 1. fetch all video frames, attach landmarks
-        frames = mio.import_video(files[0],
+        files_list = list(files.keys())
+        frames = mio.import_video(files_list[0],
                                   landmark_resolver=self._myresolver,
                                   normalize=True,
                                   exact_frame_count=True)
 
         # frames = frames.map(AAMFeature._preprocess)
         idx_above_thresh, idx_lip_opening = landmark_filter(
-            files[0],
-            self._landmarkDir,
+            files_list[0],
+            file_dict=self._files,
             threshold=self._confidence_thresh,
             keep=self._kept_frames)
 
@@ -253,7 +253,7 @@ class AAMFeature(Feature):
 
         frame_buffer = LazyList.init_from_iterable([])
         buffer_len = 256
-        for idx, file in enumerate(files[1:]):
+        for idx, file in enumerate(files_list[1:]):
             # useful to check progress
             with open('./run/log_' + self._outModelName + '.txt', 'w') as log:
                 log.write(str(idx) + ' ' + file + '\n')
@@ -264,7 +264,7 @@ class AAMFeature(Feature):
                                       exact_frame_count=True)
             idx_above_thresh, idx_lip_opening = landmark_filter(
                 file,
-                landmark_dir=self._landmarkDir,
+                file_dict=self._files,
                 threshold=self._confidence_thresh,
                 keep=self._kept_frames)
 
@@ -298,6 +298,7 @@ class AAMFeature(Feature):
                           batch_size=None)
             del frame_buffer
 
+        makedirs(self._outDir)
         mio.export_pickle(obj=aam, fp=self._outDir + self._outModelName, overwrite=True, protocol=4)
 
     def get_feature(self, file, process_opts=None):
@@ -367,6 +368,10 @@ class AAMFeature(Feature):
                         # TODO: analyse the case when aam true components are less than max components
                         shape_param_frame = result_aam.shape_parameters[-1][4:]
                         app_param_frame = result_aam.appearance_parameters[-1]
+
+                    else:
+                        raise Exception('parameters from: lk_fitting or aam_projection')
+
 
                     feat_shape.append(shape_param_frame)
                     feat_app.append(app_param_frame)
@@ -440,8 +445,7 @@ class AAMFeature(Feature):
                 'shape_app_delta': npfeat_shape_app_delta}
 
     def _myresolver(self, file, frame):
-        frames_dir = file_to_feature(str(file), extension='')
-        return {'pts_face': self._landmarkDir + frames_dir + '/frame_' + str(frame + 1) + '.pts'}
+        return {'pts_face': self._files[str(file)] + '/frame_' + str(frame + 1) + '.pts'}
 
     def _maybe_start_logging(self, file):
         if self._log_errors is True:
@@ -471,8 +475,8 @@ class AAMFeature(Feature):
             fitter = LucasKanadeAAMFitter(self._aam_fitter, lk_algorithm_cls=WibergInverseCompositional,
                                           n_shape=self._shape_components, n_appearance=self._appearance_components)
         elif self._fitter_type == 'ert':
-            fitter = DlibWrapper(
-                path.join(current_path, '../pretrained/shape_predictor_68_face_landmarks.dat'))
+            _, _, fitter68 = maybe_download_models()
+            fitter = DlibWrapper(fitter68)
         else:
             raise Exception('unknown fitter, did you mean aam/ert?')
 
