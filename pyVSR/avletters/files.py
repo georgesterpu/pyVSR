@@ -1,5 +1,8 @@
 from os import path
-import pathlib2 as path2
+try:
+      from pathlib import Path
+except ImportError:
+      from pathlib2 import Path  # python 2 backport
 from natsort import natsorted
 from sys import argv
 import pprint
@@ -28,18 +31,23 @@ def request_files(dataset_dir,
 
 def get_files(dataset_dir, content="video", condition=None):
 
-    p = path2.Path(dataset_dir)
+    p = Path(dataset_dir)
 
     if content == "video":
         p = p.joinpath("Lips")
         files = p.glob("*.mat")
     elif content == "audio":
-        conditions = p.list
-        p = p.joinpath("Audio").joinpath(condition)
+        #only mfcc in distribution, waveform dir empty
+        p = p.joinpath("Audio").joinpath("mfcc").joinpath(condition)
+        print p.as_posix()
         if p.exists() and p.is_dir():
             files = p.glob("*.mfcc")
         else:
-            raise Exception("unknown condition: " + condition)
+            raise Exception("unknown condition: " + condition + " in " + p.stem)
+    elif content == "label":
+        p = p.joinpath("Label")
+        #we don't look for the extension here, as it's not a given
+        files = p.glob("[A-Z][1-3]_*.*")
     else:
         raise Exception("unknown content: " + content)
     
