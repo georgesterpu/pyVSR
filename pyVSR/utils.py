@@ -104,7 +104,55 @@ def read_wav_file(file):
     data, sr = librosa.load(file)
     return np.expand_dims(data, axis=-1)
 
+def read_mlf_files(files):
+    file2lab = {}
+    for file_ in files:
+        file2lab.update(read_mlf_file(file_))
 
+    return file2lab
+
+def read_mlf_file(file_):
+    file2lab = {}
+    with open(file_, 'r') as mlf:
+        initiators = 0
+        terminators = 0
+        nlines = 0
+        labels = None
+        for line in mlf:
+            nlines += 1
+            stripped = line.strip()
+            #ignore comment
+            if stripped == '#!MLF!#':
+                if nlines > 1:
+                    raise ValueError('Malformed mlf file "{}" at line {}:\n{}'.format(file, nlines-1, line))
+            #record terminator
+            elif stripped == '.':
+                terminators += 1
+                if terminators != initiators:
+                    raise ValueError('Malformed mlf file "{}" at line {}:\n{}'.format(file, nlines-1, line))
+                file2lab[key] = labels
+            #record initiator
+            elif stripped.startswith("'") or stripped.startswith('"'):
+                if terminators != initiators:
+                    raise ValueError('Malformed mlf file "{}" at line {}:\n{}'.format(file, nlines-1, line))
+                key = stripped.strip("'")
+                key = key.strip('"')
+                print "found initiator: "+key
+                labels = []
+                print labels
+                initiators += 1
+            else:
+                if len(stripped) == 0:
+                    raise ValueError('Malformed mlf file "{}" at line {}:\n{}'.format(file, nlines-1, line))
+                try:
+                    start, end, label = stripped.split(" ")
+                    labels.append(label)
+                except Exception as e:
+                    print(e)
+                    raise ValueError('Malformed mlf file "{}" at line {}:\n{}'.format(file, nlines-1, line))
+
+    return file2lab
+                
 def split_multiproc(files, num_threads):
     num_files = len(files)
     average_size = int(np.floor(num_files // num_threads))
