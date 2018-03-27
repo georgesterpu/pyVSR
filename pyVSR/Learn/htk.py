@@ -1,5 +1,5 @@
 from os import path, makedirs, remove, listdir, environ, pathsep
-from subprocess import list2cmdline, run, Popen, PIPE
+from subprocess import list2cmdline, check_call, Popen, PIPE
 import numpy as np
 from ..utils import read_htk_header
 from ..tcdtimit.files import phoneme_file, phoneme_list, viseme_file, viseme_list, character_file, character_list
@@ -178,7 +178,7 @@ class HTKSys(object):
 
         cmd = ['HCompV', '-C', self._config, '-f', '0.01', '-m', '-S', self.trainscp, '-M', firstdir, self._hmm_proto]
         print(list2cmdline(cmd))
-        run(cmd, check=True)
+        check_call(cmd)
 
     def _increase_mixtures(self, nmix):
         scp = self._gen_edit_script_num_mixtures(nmix)
@@ -191,7 +191,7 @@ class HTKSys(object):
         cmd = ['HHEd', '-H', prevdir + 'vFloors', '-H', prevdir + 'hmmdefs', '-M', nextdir, scp,
                self._viseme_list]
         print(list2cmdline(cmd))
-        run(cmd, check=True)
+        check_call(cmd)
 
     def _fix_silence_viseme(self):
         edit_script = self._gen_edit_script_silence_vis()
@@ -206,7 +206,7 @@ class HTKSys(object):
                nextdir, edit_script, self._viseme_list]
 
         print(list2cmdline(cmd))
-        run(cmd, check=True)
+        check_call(cmd)
 
     def _gen_edit_script_silence_vis(self):
         fname = './run/sil.hed'
@@ -267,17 +267,17 @@ class HTKSys(object):
 
             cmd = ['HLStats -b ./run/bigrams -o ' + self._viseme_list + ' ' + self._labels]
             print(list2cmdline(cmd))
-            run(cmd, check=True, shell=True)
+            check_call(cmd, shell=True)
 
             cmd = ['HBuild -n ./run/bigrams ' + new_hmmlist + ' ' + wdnet]
             print(list2cmdline(cmd))
-            run(cmd, check=True, shell=True)
+            check_call(cmd, shell=True)
             self._word_net = wdnet
 
         else:
             cmd = ['HParse', self._grammar, wdnet]
             print(list2cmdline(cmd))
-            run(cmd, check=True)
+            check_call(cmd)
             self._word_net = wdnet
 
     def _replicate_proto(self):
@@ -392,7 +392,7 @@ class HTKSys(object):
                   ['-H', previous_dir + 'vFloors', '-H', previous_dir + 'hmmdefs',
                    '-M', current_dir, '-p', '0', self._viseme_list] + acc_files
 
-            run(list2cmdline(cmd), shell=True, check=True)
+            check_call(list2cmdline(cmd), shell=True, check=True)
 
             # cleanup folder (remove accs, scp.i)
             # cmd = ['rm ' + current_dir + '*.acc']
@@ -410,7 +410,7 @@ class HTKSys(object):
         cmd = ['HResults', '-I', self._labels, '-f', '-p', self._viseme_list, self.predicted_labels]
         print(list2cmdline(cmd))
         with open('./run/results_' + case + '_' + str(nmix)+'_mixtures.txt', 'w') as logfile:
-            run(cmd, check=True, stdout=logfile)
+            check_call(cmd, check=True, stdout=logfile)
 
 
 # r"""these functions are not part of the class"""
