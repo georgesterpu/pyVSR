@@ -13,23 +13,19 @@ class LandmarkFeature(Feature):
     Currently used to label images for AAMs
     """
 
-    def __init__(self, files, opts, out_dir):
+    def __init__(self, opts):
         r"""
 
         Parameters
         ----------
-        files
         opts
-        out_dir
         """
-        self._files = files
         self._featOpts = opts
-        self._outDir = out_dir
         self._binFile = path.join(current_path, '../bins/openface/FeatureExtraction')
 
         self._nLandmarks = 68
 
-    def extract_save_features(self, file):
+    def extract_save_features(self, example):
         r"""
         Saves the facial landmarks in text format
         Important note: the OpenFace binaries must be placed in ./bins/openface/
@@ -37,23 +33,25 @@ class LandmarkFeature(Feature):
 
         Parameters
         ----------
-        file
+        example
 
         Returns
         -------
 
         """
-        self._find_landmarks_openface(file)
-        self._parse_landmarks_file(file)
+        self._find_landmarks_openface(example)
+        self._parse_landmarks_file(example[1])
 
     def get_feature(self, file, feat_opts):
         pass
 
-    def _find_landmarks_openface(self, file):
-        outfile = utils.file_to_feature(file, extension='.full.pts')
+    def _find_landmarks_openface(self, example):
+        input_file = example[0]
+        output_file = example[1]
 
-        cmd = [self._binFile, '-f', file, '-of', self._outDir + outfile, '-q',
-               '-noAUs', '-noGaze', '-noPose', '-no3Dfp', '-noMparams']
+        cmd = [self._binFile, '-f', input_file, '-of', output_file, '-q',
+               '-2Dfp']
+
         sp.run(cmd, check=True, stdout=sp.PIPE)
 
     def _parse_landmarks_file(self, file):
@@ -67,13 +65,7 @@ class LandmarkFeature(Feature):
         -------
 
         """
-
-        infile = utils.file_to_feature(file, extension='.full.pts')
-        file_dir = utils.file_to_feature(file, extension='/')
-        makedirs(self._outDir + file_dir, exist_ok=True)
-
-        # get openface file
-        with open(self._outDir + infile, 'r') as f:
+        with open(file, 'r') as f:
             contents = f.read().splitlines()
 
         header = contents[0].split(', ')
@@ -99,18 +91,23 @@ class LandmarkFeature(Feature):
 
             write_buffer.append('}\n')
 
-            with open(self._outDir + file_dir + 'frame_' + str(idx+1) + '.pts', 'w') as g:
+            outfile = path.join(
+                path.dirname(file),
+                path.basename(path.splitext(file)[0]), 'frame_' + str(idx+1) + '.pts')
+
+            makedirs(path.dirname(outfile), exist_ok=True)
+
+            with open(outfile, 'w') as g:
                 g.writelines(write_buffer)
 
 
-def landmark_filter(file, landmark_dir, threshold, keep):
+def landmark_filter(file, file_dict, threshold, keep):
     r"""
     From a video file, it keeps only the frames above a landmark confidence threshold
     A further uniform sampling is done to retain only the `keep` proportion of images
     Parameters
     ----------
     file
-    landmark_dir
     threshold
     keep
 
@@ -119,9 +116,9 @@ def landmark_filter(file, landmark_dir, threshold, keep):
 
     """
 
-    pts_file = utils.file_to_feature(file, extension='.full.pts')
+    csv_file = file_dict[file] + '.csv'
 
-    with open(landmark_dir + pts_file, 'r') as f:
+    with open(csv_file, 'r') as f:
         contents = f.read().splitlines()
 
     frames_idx_above_thresh = _landmark_confidence_filter(contents, threshold)
@@ -149,8 +146,8 @@ def _landmark_confidence_filter(contents, threshold):
 
     """
 
-    confidence_id = 2
-    success_id = 3
+    confidence_id = 3
+    success_id = 4
 
     filtered = []
 

@@ -15,13 +15,12 @@ class HTKSys(object):
     def __init__(self,
                  train_files,
                  test_files,
-                 htk_dir,
                  hmm_states=3,
                  mixtures=(1,),
                  language_model=False,
                  config_dir=None,
                  report_results=('test',),
-                 num_threads=8):
+                 num_threads=4):
         r"""
         Class constructor
         :param train_files: Train files split
@@ -36,7 +35,6 @@ class HTKSys(object):
         # argument copy
         self._trainfeat = train_files
         self._testfeat = test_files
-        self._feature_path = htk_dir
         self._hmmstates = hmm_states
         self._mixtures = mixtures
         self._languageModel = language_model
@@ -75,8 +73,7 @@ class HTKSys(object):
             print('cleaning failed')
 
     def _get_feature_size(self):
-        htkfile = self._feature_path + path.splitext(self._trainfeat[0])[0] + '.htk'
-        header = read_htk_header(htkfile)  # read header of the first file
+        header = read_htk_header(self._trainfeat.values().__iter__().__next__())  # read header of the first file
         return header[2]//4  # sampSize is in bytes
 
     def run(self):
@@ -138,7 +135,7 @@ class HTKSys(object):
             #        '-p', '0.0', '-s', '1.0', self._viseme_dict, self._viseme_list]
 
             cmd = ['HVite', '-C', self._HViteConf, '-H', currdir + 'vFloors', '-H', currdir + 'hmmdefs', '-S',
-                   scp_list[th], '-l', '\'*\'', '-i', outfile + '.part' + str(th), '-w', self._word_net,
+                   scp_list[th], '-i', outfile + '.part' + str(th), '-w', self._word_net,
                    self._viseme_dict, self._viseme_list]
 
             print(list2cmdline(cmd))
@@ -252,9 +249,8 @@ class HTKSys(object):
 
     def _gen_feature_scp(self, scpname, features):
         lines = []
-        for file in features:
-            line = self._feature_path + path.splitext(file)[0] + '.htk\n'
-            lines.append(line)
+        for file in features.values():
+            lines.append(file + '\n')
 
         with open(scpname, 'w') as f:
             f.writelines(lines)
@@ -330,7 +326,7 @@ class HTKSys(object):
                 h.write('%s\n' % pl)
         h.close()
 
-    def _embedded_reestimation(self, num_times, binary=False, pruning='off', stats=False, num_threads=8):
+    def _embedded_reestimation(self, num_times, binary=False, pruning='off', stats=False):
         """
         :param num_times:
         :return:
@@ -357,7 +353,7 @@ class HTKSys(object):
         else:
             raise Exception('error estting parameters')
 
-        scp_list = _split_scp(self.trainscp, num_threads=num_threads)
+        scp_list = _split_scp(self.trainscp, num_threads=self._num_threads)
 
         for loop in range(num_times):
 

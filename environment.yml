@@ -1,7 +1,6 @@
 name: pyvsr
 
 channels:
-    - conda-forge
     - menpo
 
 dependencies:
