@@ -87,6 +87,11 @@ class ROIFeature(Feature):
         input_file = example[0]
         output_file = example[1]
 
+        if os.path.isfile(output_file):
+            return
+
+        print(input_file)
+
         self._preload_dlib_detector_fitter()
         roi_sequence = self.extract_roi_sequence(input_file)
 
@@ -144,7 +149,7 @@ class ROIFeature(Feature):
 
             # # Enable these when debugging # #
             # cv2.imshow('', roi_seq[current_frame, :])
-            # cv2.waitKey(30)
+            # cv2.waitKey(1)
 
             current_frame += 1
 

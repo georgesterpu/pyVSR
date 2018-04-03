@@ -175,6 +175,10 @@ def _process_one_file(file, processor, process_opts, frame_rate):
     input_file = file[0]
     output_file = file[1]
 
+    # Skip computing existing features
+    if path.isfile(output_file):
+        return
+
     print(input_file)
 
     feature_dict = processor.get_feature(input_file, process_opts)
