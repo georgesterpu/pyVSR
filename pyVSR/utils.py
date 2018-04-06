@@ -88,6 +88,24 @@ def read_hdf5_file(file, feature_name=None):
     return data
 
 
+def _read_mat_file(matfile):
+    r"""
+    Reads the contents of a .mat file
+    and formats the output according to the
+    AVLetters dataset convention
+    """
+    from scipy.io import loadmat
+    mat = loadmat(matfile)
+    vid = mat['vid']
+
+    w, h, ts = mat['siz'][0]
+    h, w, ts = int(h), int(w), int(ts)
+    hw, ts2 = vid.shape
+    assert(ts == ts2)
+    assert(hw == h*w)
+    return np.transpose(vid.reshape(h, w, ts), axes=[1, 0, 2])
+
+
 def read_wav_file(file, sr=22050):
     r"""
     Loads wav files from disk and resamples to 22050 Hz
