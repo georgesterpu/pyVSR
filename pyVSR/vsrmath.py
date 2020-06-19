@@ -9,7 +9,7 @@ def accurate_derivative(mat, derivative_type):
     """
     rows, _ = mat.shape
     filter_matrix = make_fourth_order(rows, derivative_type)
-    filtered = filter_matrix @ mat
+    filtered = np.matmul(filter_matrix, mat)
     return filtered
 
 
